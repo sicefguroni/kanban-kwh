@@ -20,7 +20,7 @@ export class KanbanCard {
 
         const card = template.content.cloneNode(true);
         this._populateCard(card);
-        
+
         const cardElement = card.querySelector('.kanban-card');
         if (this.id) {
             cardElement.dataset.taskId = this.id;
@@ -38,10 +38,14 @@ export class KanbanCard {
         const titleEl = card.querySelector('.kanban-card__title');
         const descEl = card.querySelector('.kanban-card__description');
         const deadlineEl = card.querySelector('.kanban-card__deadline');
+        const checkbox = card.querySelector('.kanban-card__checkbox');
 
         if (titleEl) titleEl.textContent = this.title;
         if (descEl) descEl.textContent = this.description || '';
         if (deadlineEl) deadlineEl.textContent = this.deadline ? `📅 ${this.deadline}` : '';
+        if (checkbox) {
+            checkbox.checked = this.status === 'done';
+        }
     }
 
     setEditListener(callback) {
@@ -59,6 +63,30 @@ export class KanbanCard {
                 });
             });
         }
+    }
+
+    setCheckboxListener(onStatusChange) {
+        if (!this.element) return;
+
+        const checkbox = this.element.querySelector('.kanban-card__checkbox');
+        if (!checkbox) return;
+
+        checkbox.checked = this.status === 'Done';
+
+        checkbox.addEventListener('change', (e) => {
+            const newStatus = e.target.checked ? 'Done' : 'To Do';
+
+            this.status = newStatus;
+
+            const targetColumn = document.querySelector(`.kanban-column[data-id="${newStatus}"] .kanban-column__cards`);
+            if (targetColumn) {
+                targetColumn.appendChild(this.element);
+            }
+
+            if (onStatusChange) {
+                onStatusChange(this.id, newStatus);
+            }
+        });
     }
 
     setDeleteListener(callback) {

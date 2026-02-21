@@ -36,6 +36,7 @@
     gap: 0.3rem;
     width: 100%;
     flex: 1;
+    padding-left: 8px;
 }
 
 /* .kanban-card__status {
@@ -123,6 +124,29 @@
     background-color: #fee2e2;
     color: #b91c1c;
     transform: scale(1.15);
+}
+
+.kanban-card__body {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.kanban-card__checkbox {
+    margin-top: 4px;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.kanban-card:has(.kanban-card__checkbox:checked) .kanban-card__title,
+.kanban-card:has(.kanban-card__checkbox:checked) .kanban-card__description,
+.kanban-card:has(.kanban-card__checkbox:checked) .kanban-card__deadline {
+    text-decoration: line-through;
+    color: #888;
+    transition: all 0.3s ease;
 }
 
 @media (min-width: 768px) {

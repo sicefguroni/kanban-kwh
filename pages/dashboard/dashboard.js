@@ -53,7 +53,20 @@ const StorageManager = {
     },
 
     moveTask(taskId, newStatus) {
-        this.updateTask(taskId, { status: newStatus });
+        const tasks = this.getTasks();
+        const taskIndex = tasks.findIndex(t => t.id === taskId);
+
+        if (taskIndex > -1) {
+            const task = tasks[taskIndex];
+
+            // If moving to DONE, remember where we are right now
+            if (newStatus === 'Done') {
+                task.previousStatus = task.status;
+            }
+
+            task.status = newStatus;
+            this.saveTasks(tasks);
+        }
     },
 
     getTask(id) {
@@ -105,8 +118,8 @@ class KanbanDashboard {
             // Attach listeners for column header (future: add task button)
             columnInstance.setAddTaskListener(() => this.openModalForCreate(status));
             columnInstance.setDropZoneListeners(
-                () => {}, // onDragOver
-                () => {}, // onDragLeave
+                () => { }, // onDragOver
+                () => { }, // onDragLeave
                 (newStatus, taskId) => this.handleDropCard(newStatus, taskId)
             );
         });
@@ -115,7 +128,7 @@ class KanbanDashboard {
 
     initAddTaskButton() {
         const { renderButton } = { renderButton: null };
-        
+
         // Create button manually without external dependency
         const container = document.getElementById('add-task-btn-container');
         if (container) {
@@ -125,7 +138,7 @@ class KanbanDashboard {
             btn.className = 'btn btn--primary';
             btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" /></svg><span>Add Task</span>';
             container.appendChild(btn);
-            
+
             this.addTaskBtn = btn;
             this.addTaskBtn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -233,7 +246,7 @@ class KanbanDashboard {
         if (this.modal.title) {
             this.modal.title.textContent = 'Edit Task';
         }
-        
+
         // Populate form with task data
         const titleField = document.getElementById('task-title');
         const descField = document.getElementById('task-description');
@@ -337,20 +350,41 @@ class KanbanDashboard {
                     const cardElement = cardClone.querySelector('.kanban-card');
                     cardElement.dataset.taskId = taskData.id;
                     cardElement.draggable = true;
-                    
+
                     // Populate card
                     const titleEl = cardElement.querySelector('.kanban-card__title');
                     const descEl = cardElement.querySelector('.kanban-card__description');
                     const deadlineEl = cardElement.querySelector('.kanban-card__deadline');
+                    const checkbox = cardElement.querySelector('.kanban-card__checkbox');
 
                     if (titleEl) titleEl.textContent = taskData.title;
                     if (descEl) descEl.textContent = taskData.description || '';
                     if (deadlineEl) deadlineEl.textContent = taskData.deadline ? `📅 ${taskData.deadline}` : '';
-                    
+
+                    // --- CHECKBOX LOGIC START ---
+                    if (checkbox) {
+                        checkbox.checked = taskData.status === 'Done';
+
+                        checkbox.addEventListener('change', (e) => {
+                            let newStatus;
+
+                            if (e.target.checked) {
+                                newStatus = 'Done';
+                            } else {
+                                newStatus = taskData.previousStatus || 'To Do';
+                            }
+
+                            StorageManager.moveTask(taskData.id, newStatus);
+
+                            this.renderTasks();
+                        });
+                    }
+                    // --- CHECKBOX LOGIC END ---
+
                     // Add event listeners
                     const editBtn = cardElement.querySelector('.kanban-card__edit-btn');
                     const deleteBtn = cardElement.querySelector('.kanban-card__delete-btn');
-                    
+
                     if (editBtn) {
                         editBtn.addEventListener('click', (e) => {
                             e.stopPropagation();
@@ -369,7 +403,7 @@ class KanbanDashboard {
                     cardElement.addEventListener('dragstart', (e) => {
                         e.dataTransfer.effectAllowed = 'move';
                         e.dataTransfer.setData('text/plain', taskData.id);
-                        
+
                         // Add visual feedback with delay to ensure it takes effect
                         setTimeout(() => {
                             cardElement.classList.add('is-dragging');
@@ -378,7 +412,7 @@ class KanbanDashboard {
 
                     cardElement.addEventListener('dragend', () => {
                         cardElement.classList.remove('is-dragging');
-                        
+
                         // Clear all drag-over states
                         document.querySelectorAll('.kanban-column__cards').forEach(c => {
                             c.classList.remove('is-drag-over');
