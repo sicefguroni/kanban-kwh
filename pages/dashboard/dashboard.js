@@ -4,6 +4,7 @@ import { DashboardDOM } from './dashboard-dom.js';
 import { DashboardModal } from './dashboard-modal.js';
 import { setupProximitySnapping } from './dashboard-proximity.js';
 import { DashboardRender } from './dashboard-render.js';
+import { DashboardDeleteModal } from './dashboard-delete-modal.js';
 
 const COMPONENTS = [
     'pages/dashboard/dashboard.html',
@@ -12,6 +13,7 @@ const COMPONENTS = [
     'components/button/button.html',
     'components/modal-field/modal-field.html',
     'components/modal/modal.html',
+    'components/delete-modal/delete-modal.html'
 ];
 
 class KanbanDashboard {
@@ -20,6 +22,7 @@ class KanbanDashboard {
         this.KanbanColumn = KanbanColumn;
         this.columnInstances = {};
         this.modal = new DashboardModal();
+        this.deleteModal = new DashboardDeleteModal();
         this.renderer = null;
         this.$addTaskBtn = null;
     }
@@ -132,11 +135,9 @@ class KanbanDashboard {
     }
 
     handleDeleteTask(taskId) {
-        if (confirm('Are you sure you want to delete this task?')) {
-            StorageService.deleteTask(taskId);
-            this.renderTasks();
+       this.deleteModal.open(taskId);
         }
-    }
+    
 
     handleDropCard(newStatus, taskId, insertIndex) {
         const task = StorageService.getTask(taskId);
@@ -151,9 +152,17 @@ class KanbanDashboard {
         this.initColumns();
         this.initAddTaskButton();
         this.initModal();
-        this.renderTasks();
-    }
+
+        this.deleteModal.init({
+            onConfirmDelete: (taskId) => {
+                StorageService.deleteTask(taskId);
+                this.renderTasks();
+    },
+});
+        this.renderTasks();    
 }
+}       
+
 
 async function initDashboard() {
     const { KanbanCard } = await import('../../components/card/card.js');
