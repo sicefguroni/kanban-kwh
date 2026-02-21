@@ -89,7 +89,7 @@
 .kanban-card__deadline-icon img {
     width: 12px;
     height: 12px;
-    display: block;
+    display: flex-start;
     opacity: 0.6
 }
 
