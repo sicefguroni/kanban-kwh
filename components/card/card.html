@@ -1,8 +1,7 @@
 <template id="card-template">
     <div class="kanban-card">
-        <span class="kanban-card__drag-handle" aria-label="Drag to reorder">
-            <img src="assets/icons/drag-handle.svg" alt="" />
-        </span>
+        <div class="kanban-card__body"></div>
+        <input type="checkbox" class="kanban-card__checkbox" aria-label="Mark as done">
         <div class="kanban-card__content">
             <div class="kanban-card__header">
                 <h3 class="kanban-card__title"></h3>
@@ -30,5 +29,6 @@
                 </svg>
             </button>
         </div>
+    </div>
     </div>
 </template>
