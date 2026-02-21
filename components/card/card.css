@@ -65,6 +65,10 @@
     width: 100%;
 }
 
+.kanban-card__content .kanban-card__description {
+    display: none;
+}
+
 .kanban-card__deadline {
     display: flex;
     align-items: center;
@@ -227,6 +231,10 @@
         font-size: 0.8rem;
     }
 
+    .kanban-card__content .kanban-card__description {
+        display: block;
+    }
+
     .kanban-card__deadline p {
         font-size: 0.8rem;
     }
@@ -266,6 +274,10 @@
 
     .kanban-card__content p {
         font-size: 0.9rem;
+    }
+
+    .kanban-card__content .kanban-card__description {
+        display: block;
     }
 
     .kanban-card__deadline p {
