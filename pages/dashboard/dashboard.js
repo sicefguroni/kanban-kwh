@@ -16,6 +16,7 @@ const COMPONENTS = [
     'components/delete-modal/delete-modal.html'
 ];
 
+// ============ Kanban Dashboard Manager ============
 class KanbanDashboard {
     constructor(KanbanCard, KanbanColumn) {
         this.KanbanCard = KanbanCard;
@@ -29,51 +30,43 @@ class KanbanDashboard {
 
     async loadComponents() {
         const requests = COMPONENTS.map(url =>
-            fetch(url)
-                .then(r => {
-                    if (!r.ok) throw new Error(`Failed to load ${url}`);
-                    return r.text();
-                })
+            fetch(url).then(r => {
+                if (!r.ok) throw new Error(`Failed to load ${url}`);
+                return r.text();
+            })
         );
         const htmls = await Promise.all(requests);
-        htmls.forEach(html => {
-            document.body.insertAdjacentHTML('beforeend', html);
-        });
+        htmls.forEach(html => document.body.insertAdjacentHTML('beforeend', html));
     }
 
     initColumns() {
         COLUMN_STATUSES.forEach(status => {
-            const columnInstance = new this.KanbanColumn({
-                title: status,
-                count: 0,
-            });
+            const columnInstance = new this.KanbanColumn({ title: status, count: 0 });
             columnInstance.render('#dashboard-grid .app');
             this.columnInstances[status] = columnInstance;
             this.attachColumnListeners(columnInstance, status);
         });
-        this.renderer = new DashboardRender(this.columnInstances);
-        setupProximitySnapping({
-            columnInstances: this.columnInstances,
-            onProximityDrop: (col, taskId) => this.handleProximityDrop(col, taskId),
-            clearSnapEffects: () => this.clearAllSnapEffects(),
+    }
+
+    initAddTaskButton() {
+        const $container = document.getElementById('add-task-btn-container');
+        if (!$container) return;
+        const $btn = DashboardDOM.createAddTaskButton();
+        $container.appendChild($btn);
+        this.$addTaskBtn = $btn;
+        this.attachAddTaskButtonListener();
+    }
+
+    attachAddTaskButtonListener() {
+        if (!this.$addTaskBtn) return;
+        this.$addTaskBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.openModalForCreate('To Do');
         });
     }
 
-    handleProximityDrop(columnInstance, taskId) {
-        if (!columnInstance.onDropCallback || !taskId) return;
-        const task = StorageService.getTask(taskId);
-        if (task) {
-            columnInstance.onDropCallback(columnInstance.title, taskId, undefined);
-        }
-    }
-
-    clearAllSnapEffects() {
-        COLUMN_STATUSES.forEach(status => {
-            const columnInstance = this.columnInstances[status];
-            if (columnInstance) {
-                columnInstance.clearSnapEffect();
-            }
-        });
+    initModal() {
+        this.modal.init();
     }
 
     attachColumnListeners(columnInstance, status) {
@@ -85,37 +78,12 @@ class KanbanDashboard {
         );
     }
 
-    initAddTaskButton() {
-        const $container = document.getElementById('add-task-btn-container');
-        if (!$container) return;
-
-        const $btn = DashboardDOM.createAddTaskButton();
-        $container.appendChild($btn);
-        this.$addTaskBtn = $btn;
-        this.attachAddTaskButtonListener();
-    }
-
-    attachAddTaskButtonListener() {
-        this.$addTaskBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.openModalForCreate('To Do');
-        });
-    }
-
-    initModal() {
-        this.modal.init();
-    }
-
     openModalForCreate(status) {
-        this.modal.openModalForCreate(status, (taskData, taskId) => {
-            this.saveTask(taskData, taskId);
-        });
+        this.modal.openModalForCreate(status, (taskData, taskId) => this.saveTask(taskData, taskId));
     }
 
     openModalForEdit(taskData) {
-        this.modal.openModalForEdit(taskData, (taskData, taskId) => {
-            this.saveTask(taskData, taskId);
-        });
+        this.modal.openModalForEdit(taskData, (taskData, taskId) => this.saveTask(taskData, taskId));
     }
 
     saveTask(taskData, taskId) {
@@ -128,6 +96,7 @@ class KanbanDashboard {
     }
 
     renderTasks() {
+        if (!this.renderer) this.renderer = new DashboardRender(this.columnInstances);
         this.renderer.renderTasks(
             (taskData) => this.openModalForEdit(taskData),
             (taskId) => this.handleDeleteTask(taskId)
@@ -135,9 +104,8 @@ class KanbanDashboard {
     }
 
     handleDeleteTask(taskId) {
-       this.deleteModal.open(taskId);
-        }
-    
+        this.deleteModal.open(taskId);
+    }
 
     handleDropCard(newStatus, taskId, insertIndex) {
         const task = StorageService.getTask(taskId);
@@ -147,21 +115,45 @@ class KanbanDashboard {
         }
     }
 
+    handleProximityDrop(columnInstance, taskId) {
+        if (!columnInstance?.onDropCallback || !taskId) return;
+        const task = StorageService.getTask(taskId);
+        if (task) columnInstance.onDropCallback(columnInstance.title, taskId, undefined);
+    }
+
+    clearAllSnapEffects() {
+        COLUMN_STATUSES.forEach(status => {
+            const columnInstance = this.columnInstances[status];
+            if (columnInstance && typeof columnInstance.clearSnapEffect === 'function') {
+                columnInstance.clearSnapEffect();
+            }
+        });
+    }
+
     async init() {
         await this.loadComponents();
         this.initColumns();
         this.initAddTaskButton();
         this.initModal();
 
+        this.renderer = new DashboardRender(this.columnInstances);
+
+        setupProximitySnapping({
+            columnInstances: this.columnInstances,
+            onProximityDrop: (col, taskId) => this.handleProximityDrop(col, taskId),
+            clearSnapEffects: () => this.clearAllSnapEffects(),
+        });
+
         this.deleteModal.init({
             onConfirmDelete: (taskId) => {
                 StorageService.deleteTask(taskId);
                 this.renderTasks();
-    },
-});
-        this.renderTasks();    
+            },
+        });
+
+        this.renderTasks();
+    }
 }
-}       
 
 
 async function initDashboard() {

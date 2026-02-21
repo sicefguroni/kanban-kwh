@@ -22,7 +22,7 @@ export class KanbanCard {
 
         const card = template.content.cloneNode(true);
         this._populateCard(card);
-        
+
         const cardElement = card.querySelector('.kanban-card');
         if (this.id) {
             cardElement.dataset.taskId = this.id;
@@ -70,6 +70,30 @@ export class KanbanCard {
                 });
             });
         }
+    }
+
+    setCheckboxListener(onStatusChange) {
+        if (!this.element) return;
+
+        const checkbox = this.element.querySelector('.kanban-card__checkbox');
+        if (!checkbox) return;
+
+        checkbox.checked = this.status === 'Done';
+
+        checkbox.addEventListener('change', (e) => {
+            const newStatus = e.target.checked ? 'Done' : 'To Do';
+
+            this.status = newStatus;
+
+            const targetColumn = document.querySelector(`.kanban-column[data-id="${newStatus}"] .kanban-column__cards`);
+            if (targetColumn) {
+                targetColumn.appendChild(this.element);
+            }
+
+            if (onStatusChange) {
+                onStatusChange(this.id, newStatus);
+            }
+        });
     }
 
     setDeleteListener(callback) {

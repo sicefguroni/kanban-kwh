@@ -113,6 +113,19 @@
     }
 }
 
+.kanban-column[data-status="Done"] .kanban-card__title,
+.kanban-column[data-id="Done"] .kanban-card__title,
+.kanban-column:last-child .kanban-card__title,
+.kanban-column[data-status="Done"] .kanban-card__description,
+.kanban-column[data-id="Done"] .kanban-card__description,
+.kanban-column:last-child .kanban-card__description,
+.kanban-column[data-status="Done"] .kanban-card__deadline,
+.kanban-column[data-id="Done"] .kanban-card__deadline,
+.kanban-column:last-child .kanban-card__deadline {
+    text-decoration: line-through;
+    opacity: 0.5;
+}
+
 @media (min-width: 768px) {
     .kanban-column__header {
         margin-bottom: 0.8rem;

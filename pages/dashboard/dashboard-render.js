@@ -5,9 +5,13 @@ import { DashboardDOM } from './dashboard-dom.js';
 export class DashboardRender {
     constructor(columnInstances) {
         this.columnInstances = columnInstances;
+        this._onEdit = null;
+        this._onDelete = null;
     }
 
     renderTasks(onEdit, onDelete) {
+        this._onEdit = onEdit;
+        this._onDelete = onDelete;
         this.clearAllColumns();
         COLUMN_STATUSES.forEach(status => {
             this.renderTasksForStatus(status, onEdit, onDelete);
@@ -44,6 +48,34 @@ export class DashboardRender {
         this.attachCardEditListener($cardElement, taskData, onEdit);
         this.attachCardDeleteListener($cardElement, taskData.id, onDelete);
         this.attachCardDragListeners($cardElement, taskData.id);
+        // Checkbox handling
+        const $checkbox = $cardElement.querySelector('.kanban-card__checkbox');
+        if ($checkbox) {
+            const task = StorageService.getTask(taskData.id);
+            $checkbox.checked = !!(task && task.status === 'Done');
+
+            $checkbox.addEventListener('change', (e) => {
+                const current = StorageService.getTask(taskData.id);
+                if (!current) return;
+
+                if (e.target.checked) {
+                    // advance status: To Do -> In Progress -> Done
+                    if (current.status === 'To Do') {
+                        StorageService.moveTask(taskData.id, 'In Progress');
+                    } else if (current.status === 'In Progress') {
+                        StorageService.moveTask(taskData.id, 'Done');
+                    }
+                } else {
+                    // unchecked from Done -> move back to To Do
+                    if (current.status === 'Done') {
+                        StorageService.moveTask(taskData.id, 'To Do');
+                    }
+                }
+
+                // re-render using stored callbacks
+                this.renderTasks(this._onEdit, this._onDelete);
+            });
+        }
     }
 
     attachCardEditListener($cardElement, taskData, onEdit) {
