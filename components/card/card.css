@@ -309,3 +309,9 @@
     }
 
 }
+
+@media (max-width: 767px) {
+    .kanban-column.is-mobile-expanded .kanban-card__content .kanban-card__description {
+        display: block;
+    }
+}
