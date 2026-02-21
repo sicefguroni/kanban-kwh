@@ -1,3 +1,5 @@
+import { formatDateString } from '../../utils/format-date.js';
+
 export const DashboardDOM = {
     createAddTaskButton() {
         const $btn = document.createElement('button');
@@ -39,13 +41,23 @@ export const DashboardDOM = {
     populateCardContent($cardElement, taskData) {
         const $titleEl = $cardElement.querySelector('.kanban-card__title');
         const $descEl = $cardElement.querySelector('.kanban-card__description');
-        const $deadlineEl = $cardElement.querySelector('.kanban-card__deadline');
+        const $deadlineTextEl = $cardElement.querySelector('.kanban-card__deadline-date');
+        const $deadlineIconEl = $cardElement.querySelector('.kanban-card__deadline-icon');
+
 
         if ($titleEl) $titleEl.textContent = taskData.title;
         if ($descEl) $descEl.textContent = taskData.description || '';
-        if ($deadlineEl) {
-            $deadlineEl.textContent = taskData.deadline ? `📅 ${taskData.deadline}` : '';
+
+        if ($deadlineTextEl) {
+            if (taskData.deadline) {
+                $deadlineTextEl.textContent = formatDateString(taskData.deadline);
+                if ($deadlineIconEl) $deadlineIconEl.classList.remove('is-hidden');
+            } else {
+                $deadlineTextEl.textContent = '';
+                if ($deadlineIconEl) $deadlineIconEl.classList.add('is-hidden');
+            }
         }
+
     },
 
     clearColumn($container) {

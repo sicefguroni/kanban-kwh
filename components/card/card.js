@@ -1,3 +1,5 @@
+import { formatDateString } from '../../utils/format-date.js';
+
 const TEMPLATE_ID = 'card-template';
 const DEFAULT_CONTAINER = '.app';
 
@@ -37,11 +39,20 @@ export class KanbanCard {
     _populateCard(card) {
         const titleEl = card.querySelector('.kanban-card__title');
         const descEl = card.querySelector('.kanban-card__description');
-        const deadlineEl = card.querySelector('.kanban-card__deadline');
+        const deadlineTextEl = card.querySelector('.kanban-card__deadline-date');
+        const deadlineIconEl = card.querySelector('.kanban-card__deadline-icon');
 
         if (titleEl) titleEl.textContent = this.title;
         if (descEl) descEl.textContent = this.description || '';
-        if (deadlineEl) deadlineEl.textContent = this.deadline ? `📅 ${this.deadline}` : '';
+        if (deadlineEl) {
+            if (this.deadline) {
+                deadlineTextEl.textContent = formatDateString(this.deadline);
+                if (deadlineIconEl) deadlineIconEl.classList.remove('is-hidden');
+            } else {
+                deadlineTextEl.textContent = '';
+                if (deadlineIconEl) deadlineIconEl.classList.add('is-hidden');
+            }
+        }
     }
 
     setEditListener(callback) {

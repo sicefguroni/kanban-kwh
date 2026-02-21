@@ -42,11 +42,24 @@
 }
 
 .kanban-column__cards {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,0.12) transparent;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
     min-height: 200px;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.kanban-column__cards::-webkit-scrollbar { 
+    width: 8px; 
+}
+
+.kanban-column__cards::-webkit-scrollbar-thumb { 
+    background: rgba(0,0,0,0.12); 
+    border-radius: 6px; 
 }
 
 .kanban-column__cards .kanban-card {

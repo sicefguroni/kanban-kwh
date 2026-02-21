@@ -1,7 +1,7 @@
 .dashboard {
     display: flex;
     flex-direction: column;
-    padding: 1rem;
+    padding: 0 0.2rem;
     gap: 0.2rem;
     width: 100vw;
     height: 100vh;
@@ -9,6 +9,7 @@
 
 .dashboard__header {
     display: flex;
+    padding: 0 1rem;
     justify-content: space-between;
     align-items: center;
     gap: 0.6rem;
@@ -39,8 +40,8 @@
 
 @media (min-width: 768px) {
     .dashboard {
-        padding: 2rem;
-        gap: 1rem;
+        padding: 0 1rem;
+        gap: 0.4rem;
     }
 
     .dashboard__header {
@@ -55,16 +56,17 @@
 
     .dashboard__grid .app {
         flex-direction: column;
-        gap: 2rem;
+        gap: 1rem;
     }
 }
 
 @media (min-width: 1024px) {
     .dashboard {
-        padding: 2rem;
+        padding: 0 1.5rem;
     }
 
     .dashboard__grid .app {
         flex-direction: row;
+        gap: 2rem;
     }
 }
