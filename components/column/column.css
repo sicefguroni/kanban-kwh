@@ -3,14 +3,40 @@
     flex-direction: column;
     flex: 1;
     width: 100%;
-
 }
 
 .kanban-column__header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     margin-bottom: 0.6rem;
+}
+
+.kanban-column__title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.kanban-column__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+}
+
+.kanban-column__toggle-icon {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s ease;
+}
+
+.kanban-column.is-mobile-expanded .kanban-column__toggle-icon {
+    transform: rotate(180deg);
 }
 
 .kanban-column__title {
@@ -19,6 +45,7 @@
 }
 
 .kanban-column__counter {
+    margin-left: auto;
     padding: 0.4rem;
     background-color: var(--secondary-color);
     color: var(--secondary-text-color);
@@ -29,7 +56,7 @@
 .kanban-column__content {
     flex: 1;
     overflow-y: auto;
-    max-height: fit-content;
+    max-height: 100%;
     width: 100%;
     padding: 0.8rem;
     background-color: var(--secondary-color);
@@ -50,17 +77,17 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    height: fit-content;
+    min-height: 200px;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.kanban-column__cards::-webkit-scrollbar { 
-    width: 8px; 
+.kanban-column__cards::-webkit-scrollbar {
+    width: 8px;
 }
 
-.kanban-column__cards::-webkit-scrollbar-thumb { 
-    background: rgba(0,0,0,0.12); 
-    border-radius: 6px; 
+.kanban-column__cards::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.12);
+    border-radius: 6px;
 }
 
 .kanban-column__cards .kanban-card {
@@ -73,45 +100,6 @@
     background-color: rgba(59, 130, 246, 0.06);
     box-shadow: inset 0 0 0 2px rgba(157, 167, 184, 0.35);
     border-radius: 0.75rem;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.kanban-column__cards.is-drag-over .kanban-card:not(.is-dragging) {
-    opacity: 0.92;
-}
-
-.kanban-column__cards.is-snapping {
-    transform: scale(1.01);
-    box-shadow: inset 0 0 0 3px rgba(157, 167, 184, 0.35), 
-                0 0 0 1px rgba(59, 130, 246, 0.2),
-                0 8px 24px rgba(59, 130, 246, 0.15);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    background: linear-gradient(135deg, 
-        rgba(134, 143, 158, 0.2) 0%, 
-        rgba(59, 130, 246, 0.08) 100%);
-    animation: snapPulse 1.5s ease-in-out infinite;
-}
-
-.kanban-column__content.is-drag-active {
-    background: linear-gradient(135deg, 
-        rgba(245, 245, 247, 0.95) 0%, 
-        rgba(239, 246, 255, 0.9) 100%);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 2px dashed rgba(134, 143, 158, 0.2);
-    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1);
-}
-
-@keyframes snapPulse {
-    0%, 100% {
-        box-shadow: inset 0 0 0 3px rgba(157, 167, 184, 0.35), 
-                    0 0 0 1px rgba(134, 143, 158, 0.2),
-                    0 8px 24px rgba(93, 100, 111, 0.15);
-    }
-    50% {
-        box-shadow: inset 0 0 0 3px rgba(157, 167, 184, 0.35), 
-                    0 0 0 1px rgba(134, 143, 158, 0.2),
-                    0 12px 32px rgba(93, 100, 111, 0.15);
-    }
 }
 
 .kanban-column[data-status="Done"] .kanban-card__title,
@@ -127,7 +115,42 @@
     opacity: 0.5;
 }
 
+@media (max-width: 767px) {
+
+    .kanban-column__content {
+        flex: 0 0 auto;
+        max-height: 110px;   
+        overflow: hidden;    
+    }
+
+
+    .kanban-column__cards {
+        min-height: 110px;
+        overflow: hidden;
+    }
+
+    .kanban-column.is-mobile-expanded .kanban-column__content {
+        flex: 1;
+        max-height: 100%;
+        overflow-y: auto;
+    }
+
+    .kanban-column.is-mobile-expanded .kanban-column__cards {
+        min-height: 110px;
+        overflow-y: auto;
+    }
+
+    .kanban-column.is-mobile-empty .kanban-column__content {
+        min-height: 110px;
+    }
+}
+
 @media (min-width: 768px) {
+
+    .kanban-column__toggle {
+        display: none;
+    }
+
     .kanban-column__header {
         margin-bottom: 0.8rem;
     }

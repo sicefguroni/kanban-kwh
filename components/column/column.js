@@ -1,6 +1,7 @@
 const TEMPLATE_ID = 'column-template';
 const DEFAULT_CONTAINER = '.app';
 const CARD_CLASS = 'kanban-card';
+const MOBILE_MQL = '(max-width: 767px)';
 
 function getCardElements(container) {
     return Array.from(container.children).filter(el => el.classList.contains(CARD_CLASS));
@@ -19,6 +20,7 @@ export class KanbanColumn {
         this.title = title;
         this.count = count;
         this.element = null;
+        this._mql = window.matchMedia(MOBILE_MQL);
     }
 
     render(container = DEFAULT_CONTAINER) {
@@ -35,6 +37,9 @@ export class KanbanColumn {
         if (!target) return null;
         target.appendChild(column);
         this.element = target.lastElementChild;
+        this._initMobileToggle();
+        this._refreshMobileEmptyState();
+
         return this.element;
     }
 
@@ -57,6 +62,7 @@ export class KanbanColumn {
     updateCounter(count) {
         const $count = this.element?.querySelector('.kanban-column__counter-label');
         if ($count) $count.textContent = count;
+        this._refreshMobileEmptyState();
     }
 
     setAddTaskListener(callback) {
@@ -86,8 +92,10 @@ export class KanbanColumn {
                 this.handleDrop(e, container, contentElement, onDrop);
             });
         };
+
         bindDropTarget(this.element);
         bindDropTarget(container);
+
         if (contentElement) {
             contentElement.addEventListener('dragleave', (e) => {
                 this.handleContentDragLeave(e, container, contentElement);
@@ -161,5 +169,44 @@ export class KanbanColumn {
         if (!this.element) return null;
         const rect = this.element.getBoundingClientRect();
         return rect.left + rect.width / 2;
+    }
+
+    _initMobileToggle() {
+        if (!this.element) return;
+
+        const $toggle = this.element.querySelector('.kanban-column__toggle');
+        if (!$toggle) return;
+
+        const applyViewport = () => {
+            if (!this._mql.matches) {
+                this.element.classList.remove('is-mobile-expanded');
+                $toggle.hidden = true;
+                return;
+            }
+
+            $toggle.hidden = false;
+            this._refreshMobileEmptyState();
+        };
+
+        this._mql.addEventListener('change', applyViewport);
+
+        $toggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.element.classList.toggle('is-mobile-expanded');
+        });
+
+        applyViewport();
+    }
+
+    _refreshMobileEmptyState() {
+        if (!this.element) return;
+        if (!this._mql.matches) {
+            this.element.classList.remove('is-mobile-empty');
+            return;
+        }
+
+        const count = this.getCardCount();
+        this.element.classList.toggle('is-mobile-empty', count === 0);
     }
 }
