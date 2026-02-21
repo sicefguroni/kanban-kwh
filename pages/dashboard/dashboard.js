@@ -1,3 +1,11 @@
+import { StorageService } from '../../services/storage-service.js';
+import { COLUMN_STATUSES } from './constants.js';
+import { DashboardDOM } from './dashboard-dom.js';
+import { DashboardModal } from './dashboard-modal.js';
+import { setupProximitySnapping } from './dashboard-proximity.js';
+import { DashboardRender } from './dashboard-render.js';
+import { DashboardDeleteModal } from './dashboard-delete-modal.js';
+
 const COMPONENTS = [
     'pages/dashboard/dashboard.html',
     'components/card/card.html',
@@ -5,6 +13,7 @@ const COMPONENTS = [
     'components/button/button.html',
     'components/modal-field/modal-field.html',
     'components/modal/modal.html',
+    'components/delete-modal/delete-modal.html'
 ];
 
 const STORAGE_KEY = 'kanban_tasks';
@@ -85,31 +94,25 @@ class KanbanDashboard {
     constructor(KanbanCard, KanbanColumn) {
         this.KanbanCard = KanbanCard;
         this.KanbanColumn = KanbanColumn;
-        this.columns = {};
         this.columnInstances = {};
-        this.modal = null;
-        this.currentEditingTaskId = null;
-        this.addTaskBtn = null;
+        this.modal = new DashboardModal();
+        this.deleteModal = new DashboardDeleteModal();
+        this.renderer = null;
+        this.$addTaskBtn = null;
     }
 
     async loadComponents() {
-        try {
-            const requests = COMPONENTS.map(url =>
-                fetch(url)
-                    .then(r => {
-                        if (!r.ok) throw new Error(`Failed to load ${url}`);
-                        return r.text();
-                    })
-            );
-            const htmls = await Promise.all(requests);
-            htmls.forEach(html => {
-                document.body.insertAdjacentHTML('beforeend', html);
-            });
-            console.log('Components loaded successfully');
-        } catch (error) {
-            console.error('Error loading components:', error);
-            throw error;
-        }
+        const requests = COMPONENTS.map(url =>
+            fetch(url)
+                .then(r => {
+                    if (!r.ok) throw new Error(`Failed to load ${url}`);
+                    return r.text();
+                })
+        );
+        const htmls = await Promise.all(requests);
+        htmls.forEach(html => {
+            document.body.insertAdjacentHTML('beforeend', html);
+        });
     }
 
     initColumns() {
@@ -156,94 +159,40 @@ class KanbanDashboard {
     initModal() {
         this.createModal();
         console.log('Modal initialized');
+            this.attachColumnListeners(columnInstance, status);
+        });
+        this.renderer = new DashboardRender(this.columnInstances);
+        setupProximitySnapping({
+            columnInstances: this.columnInstances,
+            onProximityDrop: (col, taskId) => this.handleProximityDrop(col, taskId),
+            clearSnapEffects: () => this.clearAllSnapEffects(),
+        });
     }
 
-    createModal() {
-        const template = document.getElementById('modal-template');
-        if (!template?.content) {
-            console.error('Modal template not found');
-            return;
+    handleProximityDrop(columnInstance, taskId) {
+        if (!columnInstance.onDropCallback || !taskId) return;
+        const task = StorageService.getTask(taskId);
+        if (task) {
+            columnInstance.onDropCallback(columnInstance.title, taskId, undefined);
         }
-
-        const modalClone = template.content.cloneNode(true);
-        const fieldsTemplate = document.getElementById('modal-field-template');
-        if (fieldsTemplate?.content) {
-            const fieldsContainer = modalClone.querySelector('#modal-form-fields');
-            if (fieldsContainer) {
-                fieldsContainer.appendChild(fieldsTemplate.content.cloneNode(true));
-            }
-        }
-
-        document.body.appendChild(modalClone);
-
-        this.modal = {
-            overlay: document.querySelector('.modal-overlay'),
-            form: document.getElementById('add-task-form'),
-            title: document.querySelector('.modal__title'),
-            closeBtn: document.querySelector('.modal__close'),
-            footer: document.querySelector('#modal-footer-actions'),
-        };
-
-        this.setupModalButtons();
-        this.attachModalEventListeners();
     }
 
-    setupModalButtons() {
-        if (!this.modal.footer) return;
-
-        const cancelBtn = document.createElement('button');
-        cancelBtn.type = 'button';
-        cancelBtn.className = 'btn btn--secondary modal__cancel';
-        cancelBtn.textContent = 'Cancel';
-
-        const submitBtn = document.createElement('button');
-        submitBtn.type = 'submit';
-        submitBtn.className = 'btn btn--primary';
-        submitBtn.textContent = this.currentEditingTaskId ? 'Update Task' : 'Add Task';
-
-        this.modal.footer.appendChild(cancelBtn);
-        this.modal.footer.appendChild(submitBtn);
-
-        cancelBtn.addEventListener('click', () => this.closeModal());
-    }
-
-    attachModalEventListeners() {
-        if (this.modal.closeBtn) {
-            this.modal.closeBtn.addEventListener('click', () => this.closeModal());
-        }
-
-        if (this.modal.overlay) {
-            this.modal.overlay.addEventListener('click', (e) => {
-                if (e.target === this.modal.overlay) this.closeModal();
-            });
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.modal.overlay?.classList.contains('is-open')) {
-                this.closeModal();
+    clearAllSnapEffects() {
+        COLUMN_STATUSES.forEach(status => {
+            const columnInstance = this.columnInstances[status];
+            if (columnInstance) {
+                columnInstance.clearSnapEffect();
             }
         });
-
-        if (this.modal.form) {
-            this.modal.form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleModalSubmit();
-            });
-        }
     }
 
-    openModalForCreate(status) {
-        this.currentEditingTaskId = null;
-        this.resetModalForm();
-        if (this.modal.title) {
-            this.modal.title.textContent = 'Add New Task';
-        }
-        const statusField = document.getElementById('task-status');
-        if (statusField) {
-            statusField.value = status;
-        }
-        this.updateModalButton();
-        this.openModal();
+    attachColumnListeners(columnInstance, status) {
+        columnInstance.setAddTaskListener(() => this.openModalForCreate(status));
+        columnInstance.setDropZoneListeners(
+            () => {},
+            () => {},
+            (newStatus, taskId, insertIndex) => this.handleDropCard(newStatus, taskId, insertIndex)
+        );
     }
 
     openModalForEdit(taskData) {
@@ -263,64 +212,45 @@ class KanbanDashboard {
         if (descField) descField.value = taskData.description || '';
         if (statusField) statusField.value = taskData.status || 'To Do';
         if (deadlineField) deadlineField.value = taskData.deadline || '';
+    initAddTaskButton() {
+        const $container = document.getElementById('add-task-btn-container');
+        if (!$container) return;
 
-        this.updateModalButton();
-        this.openModal();
+        const $btn = DashboardDOM.createAddTaskButton();
+        $container.appendChild($btn);
+        this.$addTaskBtn = $btn;
+        this.attachAddTaskButtonListener();
     }
 
-    updateModalButton() {
-        const submitBtn = this.modal.footer?.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            submitBtn.textContent = this.currentEditingTaskId ? 'Update Task' : 'Add Task';
-        }
+    attachAddTaskButtonListener() {
+        this.$addTaskBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.openModalForCreate('To Do');
+        });
     }
 
-    openModal() {
-        if (this.modal.overlay) {
-            this.modal.overlay.classList.add('is-open');
-            this.modal.overlay.setAttribute('aria-hidden', 'false');
-            document.body.style.overflow = 'hidden';
-        }
+    initModal() {
+        this.modal.init();
     }
 
-    closeModal() {
-        if (this.modal.overlay) {
-            this.modal.overlay.classList.remove('is-open');
-            this.modal.overlay.setAttribute('aria-hidden', 'true');
-            document.body.style.overflow = '';
-        }
-        this.resetModalForm();
+    openModalForCreate(status) {
+        this.modal.openModalForCreate(status, (taskData, taskId) => {
+            this.saveTask(taskData, taskId);
+        });
     }
 
-    resetModalForm() {
-        if (this.modal.form) {
-            this.modal.form.reset();
-        }
+    openModalForEdit(taskData) {
+        this.modal.openModalForEdit(taskData, (taskData, taskId) => {
+            this.saveTask(taskData, taskId);
+        });
     }
 
-    handleModalSubmit() {
-        if (!this.modal.form) return;
-
-        const formData = new FormData(this.modal.form);
-        const taskData = {
-            title: formData.get('title'),
-            description: formData.get('description'),
-            status: formData.get('status') || 'To Do',
-            deadline: formData.get('deadline'),
-        };
-
-        if (!taskData.title.trim()) {
-            alert('Please enter a task title');
-            return;
-        }
-
-        if (this.currentEditingTaskId) {
-            StorageManager.updateTask(this.currentEditingTaskId, taskData);
+    saveTask(taskData, taskId) {
+        if (taskId) {
+            StorageService.updateTask(taskId, taskData);
         } else {
-            StorageManager.addTask(taskData);
+            StorageService.addTask(taskData);
         }
-
-        this.closeModal();
         this.renderTasks();
     }
 
@@ -426,67 +356,48 @@ class KanbanDashboard {
             // Update column counter
             this.columnInstances[status]?.updateCounter(tasks.length);
         });
+        this.renderer.renderTasks(
+            (taskData) => this.openModalForEdit(taskData),
+            (taskId) => this.handleDeleteTask(taskId)
+        );
     }
 
     handleDeleteTask(taskId) {
-        if (confirm('Are you sure you want to delete this task?')) {
-            StorageManager.deleteTask(taskId);
+       this.deleteModal.open(taskId);
+        }
+    
+
+    handleDropCard(newStatus, taskId, insertIndex) {
+        const task = StorageService.getTask(taskId);
+        if (task) {
+            StorageService.moveTask(taskId, newStatus, insertIndex);
             this.renderTasks();
         }
-    }
-
-    handleDropCard(newStatus, taskId) {
-        const task = StorageManager.getTask(taskId);
-        if (task && task.status !== newStatus) {
-            StorageManager.moveTask(taskId, newStatus);
-            this.renderTasks();
-        }
-    }
-
-    addSampleTasks() {
-        const samples = [
-            { title: 'Design homepage', description: 'Create wireframes and mockups', status: 'To Do', deadline: '2026-02-25' },
-            { title: 'Set up project structure', description: 'Initialize repository and folder structure', status: 'To Do', deadline: '2026-02-22' },
-            { title: 'Implement drag and drop', description: 'Add drag and drop functionality for cards', status: 'In Progress', deadline: '2026-02-28' },
-            { title: 'Create components', description: 'Build reusable UI components', status: 'Done', deadline: '2026-02-20' },
-        ];
-
-        samples.forEach(sample => StorageManager.addTask(sample));
     }
 
     async init() {
-        try {
-            console.log('Kanban dashboard initializing...');
-            await this.loadComponents();
-            this.initColumns();
-            this.initAddTaskButton();
-            this.initModal();
+        await this.loadComponents();
+        this.initColumns();
+        this.initAddTaskButton();
+        this.initModal();
 
-            // Load tasks or add samples
-            if (StorageManager.getTasks().length === 0) {
-                console.log('Adding sample tasks...');
-                this.addSampleTasks();
-            }
-
-            this.renderTasks();
-            console.log('Kanban dashboard initialized successfully');
-        } catch (error) {
-            console.error('Error initializing Kanban dashboard:', error);
-        }
-    }
+        this.deleteModal.init({
+            onConfirmDelete: (taskId) => {
+                StorageService.deleteTask(taskId);
+                this.renderTasks();
+    },
+});
+        this.renderTasks();    
 }
+}       
 
-// ============ Initialize Dashboard ============
+
 async function initDashboard() {
-    try {
-        const { KanbanCard } = await import('../../components/card/card.js');
-        const { KanbanColumn } = await import('../../components/column/column.js');
+    const { KanbanCard } = await import('../../components/card/card.js');
+    const { KanbanColumn } = await import('../../components/column/column.js');
 
-        const dashboard = new KanbanDashboard(KanbanCard, KanbanColumn);
-        await dashboard.init();
-    } catch (error) {
-        console.error('Failed to initialize dashboard:', error);
-    }
+    const dashboard = new KanbanDashboard(KanbanCard, KanbanColumn);
+    await dashboard.init();
 }
 
 initDashboard();

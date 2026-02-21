@@ -1,3 +1,5 @@
+import { formatDateString } from '../../utils/format-date.js';
+
 const TEMPLATE_ID = 'card-template';
 const DEFAULT_CONTAINER = '.app';
 
@@ -37,14 +39,19 @@ export class KanbanCard {
     _populateCard(card) {
         const titleEl = card.querySelector('.kanban-card__title');
         const descEl = card.querySelector('.kanban-card__description');
-        const deadlineEl = card.querySelector('.kanban-card__deadline');
-        const checkbox = card.querySelector('.kanban-card__checkbox');
+        const deadlineTextEl = card.querySelector('.kanban-card__deadline-date');
+        const deadlineIconEl = card.querySelector('.kanban-card__deadline-icon');
 
         if (titleEl) titleEl.textContent = this.title;
         if (descEl) descEl.textContent = this.description || '';
-        if (deadlineEl) deadlineEl.textContent = this.deadline ? `📅 ${this.deadline}` : '';
-        if (checkbox) {
-            checkbox.checked = this.status === 'done';
+        if (deadlineEl) {
+            if (this.deadline) {
+                deadlineTextEl.textContent = formatDateString(this.deadline);
+                if (deadlineIconEl) deadlineIconEl.classList.remove('is-hidden');
+            } else {
+                deadlineTextEl.textContent = '';
+                if (deadlineIconEl) deadlineIconEl.classList.add('is-hidden');
+            }
         }
     }
 
@@ -105,13 +112,10 @@ export class KanbanCard {
         const dragHandle = this.element.querySelector('.kanban-card__drag-handle');
         if (!dragHandle) return;
 
-        // Make the entire card draggable
         this.element.draggable = true;
-
         this.element.addEventListener('dragstart', (e) => {
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/plain', this.id);
-            // Add visual feedback
             setTimeout(() => {
                 this.element.classList.add('is-dragging');
             }, 0);

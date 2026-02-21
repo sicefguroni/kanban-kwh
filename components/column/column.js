@@ -1,5 +1,18 @@
 const TEMPLATE_ID = 'column-template';
 const DEFAULT_CONTAINER = '.app';
+const CARD_CLASS = 'kanban-card';
+
+function getCardElements(container) {
+    return Array.from(container.children).filter(el => el.classList.contains(CARD_CLASS));
+}
+
+function getInsertIndexForY(cardElements, y) {
+    for (let i = 0; i < cardElements.length; i++) {
+        const rect = cardElements[i].getBoundingClientRect();
+        if (y < rect.top + rect.height / 2) return i;
+    }
+    return cardElements.length;
+}
 
 export class KanbanColumn {
     constructor({ title = '', count = 0 } = {}) {
@@ -19,24 +32,21 @@ export class KanbanColumn {
         this._populateColumn(column);
 
         const target = document.querySelector(container);
-        if (target) {
-            target.appendChild(column);
-            this.element = target.lastElementChild;
-        }
+        if (!target) return null;
+        target.appendChild(column);
+        this.element = target.lastElementChild;
         return this.element;
     }
 
     _populateColumn(column) {
-        const titleEl = column.querySelector('.kanban-column__title');
-        const countEl = column.querySelector('.kanban-column__counter-label');
-
-        if (titleEl) titleEl.textContent = this.title;
-        if (countEl) countEl.textContent = this.count;
+        const $title = column.querySelector('.kanban-column__title');
+        const $count = column.querySelector('.kanban-column__counter-label');
+        if ($title) $title.textContent = this.title;
+        if ($count) $count.textContent = this.count;
     }
 
     getCardsContainer() {
-        if (!this.element) return null;
-        return this.element.querySelector('.kanban-column__cards');
+        return this.element?.querySelector('.kanban-column__cards') ?? null;
     }
 
     getCardCount() {
@@ -45,70 +55,111 @@ export class KanbanColumn {
     }
 
     updateCounter(count) {
-        if (!this.element) return;
-        const countEl = this.element.querySelector('.kanban-column__counter-label');
-        if (countEl) countEl.textContent = count;
+        const $count = this.element?.querySelector('.kanban-column__counter-label');
+        if ($count) $count.textContent = count;
     }
 
     setAddTaskListener(callback) {
-        if (!this.element) return;
-        const header = this.element.querySelector('.kanban-column__header');
-        if (header) {
-            header.addEventListener('click', () => {
-                callback(this.title);
-            });
-        }
+        const $header = this.element?.querySelector('.kanban-column__header');
+        if ($header) $header.addEventListener('click', () => callback(this.title));
     }
 
     setDropZoneListeners(onDragOver, onDragLeave, onDrop) {
         const container = this.getCardsContainer();
         if (!container) return;
+        const contentElement = this.element?.querySelector('.kanban-column__content');
+        this.onDropCallback = onDrop;
 
-        // Add drag over effect to the entire column
-        const columnElement = this.element;
-        const contentElement = columnElement.querySelector('.kanban-column__content');
-
-        container.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            
-            // Add visual snapping feedback
-            container.classList.add('is-drag-over');
-            if (contentElement) {
-                contentElement.classList.add('is-drag-active');
-            }
-            onDragOver?.(this.title);
-        });
-
-        container.addEventListener('dragleave', (e) => {
-            // Only remove if leaving the container entirely
-            if (e.target === container) {
-                container.classList.remove('is-drag-over');
-                if (contentElement) {
-                    contentElement.classList.remove('is-drag-active');
-                }
-            }
-            onDragLeave?.();
-        });
-
-        container.addEventListener('drop', (e) => {
-            e.preventDefault();
-            container.classList.remove('is-drag-over');
-            if (contentElement) {
-                contentElement.classList.remove('is-drag-active');
-            }
-            const taskId = e.dataTransfer.getData('text/plain');
-            onDrop?.(this.title, taskId);
-        });
-
-        // Add drag leave for content area
+        const bindDropTarget = ($el) => {
+            $el.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                this.handleDragOver(e, container, contentElement);
+                onDragOver?.(this.title);
+            });
+            $el.addEventListener('dragleave', (e) => {
+                this.handleDragLeave(e, container, contentElement);
+                onDragLeave?.();
+            });
+            $el.addEventListener('drop', (e) => {
+                e.preventDefault();
+                this.handleDrop(e, container, contentElement, onDrop);
+            });
+        };
+        bindDropTarget(this.element);
+        bindDropTarget(container);
         if (contentElement) {
             contentElement.addEventListener('dragleave', (e) => {
-                if (e.target === contentElement) {
-                    container.classList.remove('is-drag-over');
-                    contentElement.classList.remove('is-drag-active');
-                }
+                this.handleContentDragLeave(e, container, contentElement);
             });
         }
+    }
+
+    setDropZoneActive(container, contentElement, active) {
+        container.classList.toggle('is-drag-over', active);
+        container.classList.toggle('is-snapping', active);
+        if (contentElement) contentElement.classList.toggle('is-drag-active', active);
+    }
+
+    handleDragOver(e, container, contentElement) {
+        if (!container.classList.contains('is-drag-over')) {
+            this.setDropZoneActive(container, contentElement, true);
+        }
+    }
+
+    handleDragLeave(e, container, contentElement) {
+        const { relatedTarget } = e;
+        if (container.contains(relatedTarget) || relatedTarget === container) return;
+        this.setDropZoneActive(container, contentElement, false);
+    }
+
+    handleDrop(e, container, contentElement, onDrop) {
+        this.setDropZoneActive(container, contentElement, false);
+        const insertIndex = this.getInsertIndex(container, e.clientY);
+        const taskId = e.dataTransfer.getData('text/plain');
+        const callback = onDrop ?? this.onDropCallback;
+        callback?.(this.title, taskId, insertIndex);
+    }
+
+    handleContentDragLeave(e, container, contentElement) {
+        const { relatedTarget } = e;
+        if (contentElement.contains(relatedTarget) || relatedTarget === contentElement) return;
+        this.setDropZoneActive(container, contentElement, false);
+    }
+
+    getInsertIndex(container, y) {
+        return getInsertIndexForY(getCardElements(container), y);
+    }
+
+    triggerSnapEffect() {
+        const container = this.getCardsContainer();
+        if (!container) return;
+        const contentElement = this.element?.querySelector('.kanban-column__content');
+        this.setDropZoneActive(container, contentElement, true);
+    }
+
+    clearSnapEffect() {
+        const container = this.getCardsContainer();
+        if (!container) return;
+        const contentElement = this.element?.querySelector('.kanban-column__content');
+        this.setDropZoneActive(container, contentElement, false);
+    }
+
+    isNearColumn(x, threshold = 200) {
+        if (!this.element) return false;
+        const rect = this.element.getBoundingClientRect();
+        return x >= rect.left - threshold && x <= rect.right + threshold;
+    }
+
+    isInsideColumn(x) {
+        if (!this.element) return false;
+        const rect = this.element.getBoundingClientRect();
+        return x >= rect.left && x <= rect.right;
+    }
+
+    getColumnCenterX() {
+        if (!this.element) return null;
+        const rect = this.element.getBoundingClientRect();
+        return rect.left + rect.width / 2;
     }
 }
