@@ -52,19 +52,25 @@ const StorageManager = {
         return this.getTasks().filter(task => task.status === status);
     },
 
-    moveTask(taskId, newStatus) {
+    moveTask(taskId, newStatus, isCheckbox = false) {
         const tasks = this.getTasks();
         const taskIndex = tasks.findIndex(t => t.id === taskId);
 
         if (taskIndex > -1) {
             const task = tasks[taskIndex];
 
-            // If moving to DONE, remember where we are right now
-            if (newStatus === 'Done') {
-                task.previousStatus = task.status;
+            if (isCheckbox) {
+                if (task.status === 'To Do') {
+                    task.status = 'In Progress';
+                } else if (task.status === 'In Progress') {
+                    task.status = 'Done';
+                } else if (task.status === 'Done') {
+                    task.status = 'To Do';
+                }
+            } else {
+                task.status = newStatus;
             }
 
-            task.status = newStatus;
             this.saveTasks(tasks);
         }
     },
@@ -361,25 +367,16 @@ class KanbanDashboard {
                     if (descEl) descEl.textContent = taskData.description || '';
                     if (deadlineEl) deadlineEl.textContent = taskData.deadline ? `📅 ${taskData.deadline}` : '';
 
-                    // --- CHECKBOX LOGIC START ---
+                    // --- CHECKBOX LOGIC ---
                     if (checkbox) {
                         checkbox.checked = taskData.status === 'Done';
 
-                        checkbox.addEventListener('change', (e) => {
-                            let newStatus;
-
-                            if (e.target.checked) {
-                                newStatus = 'Done';
-                            } else {
-                                newStatus = taskData.previousStatus || 'To Do';
-                            }
-
-                            StorageManager.moveTask(taskData.id, newStatus);
+                        checkbox.addEventListener('change', () => {
+                            StorageManager.moveTask(taskData.id, null, true);
 
                             this.renderTasks();
                         });
                     }
-                    // --- CHECKBOX LOGIC END ---
 
                     // Add event listeners
                     const editBtn = cardElement.querySelector('.kanban-card__edit-btn');
