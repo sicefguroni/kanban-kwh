@@ -7,22 +7,22 @@ function distanceToColumn(x, columnInstance) {
 }
 
 function findNearestColumn(x, columnInstances) {
+    for (const status of COLUMN_STATUSES) {
+        const col = columnInstances[status];
+        if (!col) continue;
+        if (col.isInsideColumn(x)) return col;
+    }
     let nearest = null;
     let minDist = Infinity;
-    COLUMN_STATUSES.forEach(status => {
+    for (const status of COLUMN_STATUSES) {
         const col = columnInstances[status];
-        if (!col) return;
-        if (col.isInsideColumn(x)) {
+        if (!col || !col.isNearColumn(x)) continue;
+        const d = distanceToColumn(x, col);
+        if (d < minDist) {
+            minDist = d;
             nearest = col;
-            minDist = 0;
-        } else if (col.isNearColumn(x)) {
-            const d = distanceToColumn(x, col);
-            if (d < minDist) {
-                minDist = d;
-                nearest = col;
-            }
         }
-    });
+    }
     return nearest;
 }
 
@@ -58,7 +58,7 @@ export function setupProximitySnapping(ctx) {
     }, true);
 
     document.addEventListener('drop', (e) => {
-        if (e.target.closest('.kanban-column')) droppedOnColumn = true;
+        if (e.target.closest('.kanban-column') || e.target.closest('.mobile-drop-bar') || e.target.closest('.mobile-drop-overlay')) droppedOnColumn = true;
     }, true);
 
     document.addEventListener('dragend', () => {

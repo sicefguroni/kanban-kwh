@@ -19,6 +19,12 @@
     font-size: 1.4rem;
 }
 
+.dashboard__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .dashboard__grid {
     display: flex;
     flex: 1;
@@ -68,5 +74,190 @@
     .dashboard__grid .app {
         flex-direction: row;
         gap: 2rem;
+    }
+}
+
+/* Keyboard help overlay */
+.keyboard-help {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.keyboard-help.is-visible {
+    pointer-events: auto;
+    opacity: 1;
+    visibility: visible;
+}
+
+.keyboard-help__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+}
+
+.keyboard-help__panel {
+    position: relative;
+    background: var(--primary-color, #1e1e2e);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+    min-width: 280px;
+    max-width: 360px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.keyboard-help__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.keyboard-help__title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: rgba(99, 102, 241, 0.95);
+}
+
+.keyboard-help__close {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.75rem;
+    background: rgba(99, 102, 241, 0.15);
+    border-radius: 0.25rem;
+    cursor: pointer;
+    color: rgba(99, 102, 241, 0.9);
+}
+
+.keyboard-help__grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.keyboard-help__row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.keyboard-help__row kbd {
+    display: inline-block;
+    padding: 0.15rem 0.35rem;
+    font-family: inherit;
+    font-size: 0.75rem;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 0.25rem;
+    color: rgba(99, 102, 241, 0.95);
+    min-width: 1.5rem;
+    text-align: center;
+}
+
+.keyboard-help__row span {
+    margin-left: 0.25rem;
+    color: var(--primary-text-color, #cdd6f4);
+}
+
+/* Keyboard indicator (header) */
+.keyboard-indicator {
+    display: flex;
+    align-items: center;
+}
+
+.keyboard-indicator__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.8rem;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: 0.35rem;
+    color: rgba(99, 102, 241, 0.9);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.keyboard-indicator__btn:hover {
+    background: rgba(99, 102, 241, 0.14);
+    border-color: rgba(99, 102, 241, 0.4);
+}
+
+.keyboard-indicator__btn kbd {
+    font-size: 0.9em;
+    padding: 0.1rem 0.25rem;
+    background: rgba(99, 102, 241, 0.15);
+    border-radius: 0.2rem;
+}
+
+/* Mobile drop: full-screen hitbox overlay + small bar at bottom (mobile only) */
+.mobile-drop-bar,
+.mobile-drop-overlay {
+    display: none;
+}
+
+@media (max-width: 767px) {
+    .mobile-drop-overlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 1001;
+    }
+
+    .mobile-drop-bar {
+        display: none;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        gap: 0.25rem;
+        padding: 0.5rem;
+        padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+        background: var(--primary-color, #1e1e2e);
+        border-top: 1px solid rgba(99, 102, 241, 0.25);
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
+        transition: transform 0.25s ease;
+    }
+
+    .mobile-drop-bar.is-visible {
+        display: flex;
+        transform: translateY(0);
+        z-index: 1002;
+    }
+
+    .mobile-drop-bar__zone {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 2.75rem;
+        padding: 0 0.5rem;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--primary-text-color, #cdd6f4);
+        background: rgba(99, 102, 241, 0.08);
+        border: 2px dashed rgba(99, 102, 241, 0.3);
+        border-radius: 0.5rem;
+        transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+
+    .mobile-drop-bar__zone.is-drag-over {
+        background: rgba(99, 102, 241, 0.2);
+        border-color: rgba(99, 102, 241, 0.6);
+        color: rgba(99, 102, 241, 0.95);
     }
 }

@@ -33,6 +33,11 @@
     background-color: var(--secondary-color);
 }
 
+.btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35);
+}
+
 .btn__icon {
     display: inline-flex;
 }

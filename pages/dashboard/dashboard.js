@@ -1,10 +1,11 @@
 import { StorageService } from '../../services/storage-service.js';
 import { COLUMN_STATUSES } from './constants.js';
 import { DashboardDOM } from './dashboard-dom.js';
+import { DashboardDeleteModal } from './dashboard-delete-modal.js';
+import { setupKeyboard } from './dashboard-keyboard.js';
 import { DashboardModal } from './dashboard-modal.js';
 import { setupProximitySnapping } from './dashboard-proximity.js';
 import { DashboardRender } from './dashboard-render.js';
-import { DashboardDeleteModal } from './dashboard-delete-modal.js';
 
 const COMPONENTS = [
     'pages/dashboard/dashboard.html',
@@ -26,6 +27,7 @@ class KanbanDashboard {
         this.deleteModal = new DashboardDeleteModal();
         this.renderer = null;
         this.$addTaskBtn = null;
+        this.keyboard = null;
     }
 
     async loadComponents() {
@@ -40,8 +42,12 @@ class KanbanDashboard {
     }
 
     initColumns() {
-        COLUMN_STATUSES.forEach(status => {
-            const columnInstance = new this.KanbanColumn({ title: status, count: 0 });
+        COLUMN_STATUSES.forEach((status, index) => {
+            const columnInstance = new this.KanbanColumn({
+                title: status,
+                count: 0,
+                shortcutKey: String(index + 1),
+            });
             columnInstance.render('#dashboard-grid .app');
             this.columnInstances[status] = columnInstance;
             this.attachColumnListeners(columnInstance, status);
@@ -55,6 +61,121 @@ class KanbanDashboard {
         $container.appendChild($btn);
         this.$addTaskBtn = $btn;
         this.attachAddTaskButtonListener();
+    }
+
+    initMobileDropBar() {
+        const dashboard = document.querySelector('.dashboard');
+        if (!dashboard || document.getElementById('mobile-drop-bar')) return;
+
+        const self = this;
+        const mobileMql = window.matchMedia('(max-width: 767px)');
+        let lastDragoverClientX = null;
+        let overlay = null;
+
+        const bar = document.createElement('div');
+        bar.id = 'mobile-drop-bar';
+        bar.className = 'mobile-drop-bar';
+        bar.setAttribute('aria-label', 'Drop zone for moving tasks');
+        bar.innerHTML = COLUMN_STATUSES.map(
+            (status) =>
+                `<div class="mobile-drop-bar__zone" data-status="${status}">${status}</div>`
+        ).join('');
+        dashboard.appendChild(bar);
+
+        function statusFromClientX(clientX) {
+            const w = document.documentElement.clientWidth || 1;
+            if (clientX == null || Number.isNaN(clientX) || clientX <= 0) {
+                const mid = w / 2;
+                clientX = mid;
+            }
+            const x = Math.max(0, Math.min(clientX, w - 1));
+            const i = Math.floor((x / w) * COLUMN_STATUSES.length);
+            return COLUMN_STATUSES[Math.max(0, Math.min(i, COLUMN_STATUSES.length - 1))];
+        }
+
+        function hideDropUI() {
+            bar.classList.remove('is-visible');
+            lastDragoverClientX = null;
+            bar.querySelectorAll('.mobile-drop-bar__zone').forEach((z) => z.classList.remove('is-drag-over'));
+            if (overlay && overlay.parentNode) {
+                overlay.remove();
+                overlay = null;
+            }
+        }
+
+        function performDrop(taskId, status) {
+            if (!taskId || !status) return;
+            hideDropUI();
+            self.handleDropCard(status, taskId, undefined);
+        }
+
+        bar.querySelectorAll('.mobile-drop-bar__zone').forEach((zone) => {
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = 'move';
+                zone.classList.add('is-drag-over');
+            });
+            zone.addEventListener('dragleave', (e) => {
+                if (!zone.contains(e.relatedTarget)) zone.classList.remove('is-drag-over');
+            });
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const taskId = e.dataTransfer.getData('text/plain');
+                const status = zone.dataset.status;
+                performDrop(taskId, status);
+            });
+        });
+
+        function showOverlay() {
+            if (overlay) return;
+            overlay = document.createElement('div');
+            overlay.id = 'mobile-drop-overlay';
+            overlay.className = 'mobile-drop-overlay is-visible';
+            overlay.setAttribute('aria-hidden', 'true');
+
+            overlay.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = 'move';
+                lastDragoverClientX = e.clientX;
+                const status = statusFromClientX(e.clientX);
+                bar.querySelectorAll('.mobile-drop-bar__zone').forEach((z) => {
+                    z.classList.toggle('is-drag-over', z.dataset.status === status);
+                });
+            });
+            overlay.addEventListener('dragleave', (e) => {
+                if (!overlay?.contains(e.relatedTarget)) {
+                    lastDragoverClientX = null;
+                    bar.querySelectorAll('.mobile-drop-bar__zone').forEach((z) => z.classList.remove('is-drag-over'));
+                }
+            });
+            overlay.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const taskId = e.dataTransfer.getData('text/plain');
+                const x = lastDragoverClientX ?? e.clientX;
+                const status = statusFromClientX(x);
+                performDrop(taskId, status);
+            });
+
+            dashboard.appendChild(overlay);
+        }
+
+        document.addEventListener('dragstart', (e) => {
+            if (!e.target.closest('.kanban-card[data-task-id]')) return;
+            if (!mobileMql.matches) return;
+            lastDragoverClientX = null;
+            bar.classList.add('is-visible');
+            requestAnimationFrame(() => {
+                showOverlay();
+            });
+        });
+
+        document.addEventListener('dragend', () => {
+            setTimeout(hideDropUI, 0);
+        });
     }
 
     attachAddTaskButtonListener() {
@@ -87,12 +208,16 @@ class KanbanDashboard {
     }
 
     saveTask(taskData, taskId) {
+        let selectedId = null;
         if (taskId) {
             StorageService.updateTask(taskId, taskData);
+            selectedId = taskId;
         } else {
-            StorageService.addTask(taskData);
+            const newTask = StorageService.addTask(taskData);
+            if (newTask) selectedId = newTask.id;
         }
         this.renderTasks();
+        if (selectedId) this.keyboard?.selectTaskId(selectedId);
     }
 
     renderTasks() {
@@ -101,6 +226,7 @@ class KanbanDashboard {
             (taskData) => this.openModalForEdit(taskData),
             (taskId) => this.handleDeleteTask(taskId)
         );
+        this.keyboard?.syncFocus();
     }
 
     handleDeleteTask(taskId) {
@@ -112,6 +238,7 @@ class KanbanDashboard {
         if (task) {
             StorageService.moveTask(taskId, newStatus, insertIndex);
             this.renderTasks();
+            this.keyboard?.selectTaskId(taskId);
         }
     }
 
@@ -135,6 +262,7 @@ class KanbanDashboard {
         this.initColumns();
         this.initAddTaskButton();
         this.initModal();
+        this.initMobileDropBar();
 
         this.renderer = new DashboardRender(this.columnInstances);
 
@@ -149,6 +277,18 @@ class KanbanDashboard {
                 StorageService.deleteTask(taskId);
                 this.renderTasks();
             },
+        });
+
+        this.keyboard = setupKeyboard({
+            columnInstances: this.columnInstances,
+            onEditTask: (taskId) => {
+                const task = StorageService.getTask(taskId);
+                if (task) this.openModalForEdit(task);
+            },
+            onDeleteTask: (taskId) => this.handleDeleteTask(taskId),
+            onCreateTask: (status) => this.openModalForCreate(status),
+            onMoveTask: (taskId, newStatus, insertIndex) => this.handleDropCard(newStatus, taskId, insertIndex),
+            isModalOpen: () => document.querySelector('.modal-overlay.is-open') != null,
         });
 
         this.renderTasks();

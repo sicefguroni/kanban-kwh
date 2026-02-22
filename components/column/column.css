@@ -41,15 +41,45 @@
 .kanban-column__title {
     font-size: 1rem;
     font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
+/* Keyboard shortcut: key-cap style */
+.kanban-column__shortcut {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.35rem;
+    height: 1.35rem;
+    padding: 0 0.3rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: rgba(99, 102, 241, 0.95);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9));
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 0.35rem;
+    box-shadow: 0 1px 0 rgba(99, 102, 241, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Task count: soft badge style */
 .kanban-column__counter {
     margin-left: auto;
-    padding: 0.4rem;
-    background-color: var(--secondary-color);
-    color: var(--secondary-text-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 0.5rem;
     font-size: 0.8rem;
-    border-radius: 0.2rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--primary-text-color);
+    background-color: rgba(0, 0, 0, 0.06);
+    border-radius: 1rem;
 }
 
 .kanban-column__content {
@@ -82,12 +112,24 @@
     border-color: rgba(59, 130, 246, 0.1);
 }
 
+/* Keyboard focus: subtle tint so you can tell which column is selected */
+.kanban-column.is-keyboard-focused .kanban-column__header {
+    background-color: rgba(59, 130, 246, 0.05);
+    border-radius: 0.5rem 0.5rem 0 0;
+    transition: background-color 0.2s ease;
+}
+.kanban-column.is-keyboard-focused .kanban-column__content {
+    background-color: rgba(59, 130, 246, 0.06);
+    border-color: rgba(59, 130, 246, 0.18);
+}
+
 .kanban-column__cards {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: rgba(0,0,0,0.12) transparent;
     display: flex;
+    padding-top: 3px;
     flex-direction: column;
     gap: 0.5rem;
     min-height: fit-content;

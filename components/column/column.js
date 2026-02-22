@@ -16,9 +16,10 @@ function getInsertIndexForY(cardElements, y) {
 }
 
 export class KanbanColumn {
-    constructor({ title = '', count = 0 } = {}) {
+    constructor({ title = '', count = 0, shortcutKey = '' } = {}) {
         this.title = title;
         this.count = count;
+        this.shortcutKey = shortcutKey;
         this.element = null;
         this._mql = window.matchMedia(MOBILE_MQL);
     }
@@ -45,8 +46,15 @@ export class KanbanColumn {
 
     _populateColumn(column) {
         const $title = column.querySelector('.kanban-column__title');
+        const $shortcut = column.querySelector('.kanban-column__shortcut');
         const $count = column.querySelector('.kanban-column__counter-label');
-        if ($title) $title.textContent = this.title;
+        if ($title) {
+            if ($shortcut && this.shortcutKey) {
+                $shortcut.textContent = this.shortcutKey;
+                $shortcut.setAttribute('title', `Press ${this.shortcutKey} to select`);
+            }
+            $title.appendChild(document.createTextNode(' ' + this.title));
+        }
         if ($count) $count.textContent = this.count;
     }
 

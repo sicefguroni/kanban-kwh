@@ -25,9 +25,21 @@
     color: var(--secondary-text-color);
 }
 
+.modal__input:-webkit-autofill,
+.modal__input:-webkit-autofill:hover,
+.modal__input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px var(--secondary-color) inset;
+    box-shadow: 0 0 0 1000px var(--secondary-color) inset;
+}
+
 .modal__input:focus {
     outline: none;
-    border-color: var(--tertiary-color);
+    border-color: rgba(59, 130, 246, 0.35);
+}
+
+.modal__input:focus:invalid {
+    box-shadow: none;
+    border-color: rgba(59, 130, 246, 0.35);
 }
 
 .modal__textarea {

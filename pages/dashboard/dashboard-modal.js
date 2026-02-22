@@ -50,6 +50,14 @@ export class DashboardModal {
         this.modal.footer.appendChild($cancelBtn);
         this.modal.footer.appendChild($submitBtn);
         $cancelBtn.addEventListener('click', () => this.closeModal());
+
+        const footerEl = this.modal.footer.closest('.modal__footer');
+        if (footerEl && !footerEl.querySelector('.modal__keyboard-hint')) {
+            const hint = document.createElement('p');
+            hint.className = 'modal__keyboard-hint';
+            hint.textContent = 'Tab / Shift+↑↓ move · Enter save · Esc close';
+            footerEl.appendChild(hint);
+        }
     }
 
     attachModalEventListeners() {
@@ -57,6 +65,51 @@ export class DashboardModal {
         this.attachOverlayClickListener();
         this.attachEscapeKeyListener();
         this.attachFormSubmitListener();
+        this.attachFocusTrap();
+    }
+
+    getFocusableElements() {
+        if (!this.modal?.overlay) return [];
+        const ids = ['task-title', 'task-description', 'task-status', 'task-deadline'];
+        const list = [];
+        const closeBtn = this.modal.overlay.querySelector('.modal__close');
+        if (closeBtn && !closeBtn.disabled) list.push(closeBtn);
+        ids.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el && !el.disabled) list.push(el);
+        });
+        const cancelBtn = this.modal.overlay.querySelector('.modal__cancel');
+        const submitBtn = this.modal.overlay.querySelector('button[type="submit"]');
+        if (cancelBtn && !cancelBtn.disabled) list.push(cancelBtn);
+        if (submitBtn && !submitBtn.disabled) list.push(submitBtn);
+        return list;
+    }
+
+    attachFocusTrap() {
+        if (!this.modal?.overlay) return;
+        this.modal.overlay.addEventListener('keydown', (e) => {
+            if (!this.modal.overlay.classList.contains('is-open')) return;
+            const focusable = this.getFocusableElements();
+            if (focusable.length === 0) return;
+
+            const move = (direction) => {
+                e.preventDefault();
+                const i = focusable.indexOf(document.activeElement);
+                const next = direction === 1
+                    ? (i >= focusable.length - 1 ? 0 : i + 1)
+                    : (i <= 0 ? focusable.length - 1 : i - 1);
+                focusable[next].focus();
+            };
+
+            if (e.key === 'Tab') {
+                move(e.shiftKey ? -1 : 1);
+                return;
+            }
+            if (e.shiftKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+                e.preventDefault();
+                move(e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : -1);
+            }
+        }, true);
     }
 
     attachCloseButtonListener() {
@@ -147,6 +200,20 @@ export class DashboardModal {
             this.modal.overlay.classList.add('is-open');
             this.modal.overlay.setAttribute('aria-hidden', 'false');
             document.body.style.overflow = 'hidden';
+        }
+        this.focusFirstField();
+    }
+
+    focusFirstField() {
+        const focusable = this.getFocusableElements();
+        const firstInput = focusable.find((el) => {
+            const id = el.id;
+            return id === 'task-title' || id === 'task-description' || id === 'task-status' || id === 'task-deadline';
+        }) || focusable[0];
+        if (firstInput) {
+            requestAnimationFrame(() => {
+                firstInput.focus();
+            });
         }
     }
 

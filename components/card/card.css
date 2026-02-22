@@ -7,14 +7,11 @@
     width: 100%;
     position: relative;
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.2s ease,
                 border-color 0.2s ease;
     cursor: grab;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .kanban-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     transform: translateY(-1px);
     border-color: rgba(59, 130, 246, 0.2);
 }
@@ -115,8 +112,15 @@
     transition: opacity 0.2s ease;
 }
 
-.kanban-card:hover .kanban-card__actions {
+.kanban-card:hover .kanban-card__actions,
+.kanban-card.is-keyboard-focused .kanban-card__actions {
     opacity: 1;
+}
+
+/* Keyboard focus: same as hover so selection is obvious and consistent */
+.kanban-card.is-keyboard-focused {
+    transform: translateY(-1px);
+    border-color: rgba(59, 130, 246, 0.25);
 }
 
 .kanban-card__action-btn {
@@ -148,13 +152,9 @@
     cursor: grabbing;
     transform: scale(1.02);
     transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.15s ease,
                 opacity 0.15s ease;
     z-index: 1000;
-    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.14),
-                0 8px 20px rgba(0, 0, 0, 0.08),
-                0 0 0 2px rgba(59, 130, 246, 0.35);
-    border-color: rgba(59, 130, 246, 0.5);
+    border: 2px solid rgba(59, 130, 246, 0.5);
     background-color: rgba(255, 255, 255, 0.98);
 }
 
