@@ -70,7 +70,7 @@
 .modal__close:focus-visible,
 .modal .btn:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35);
+    box-shadow: 0 0 0 2px var(--accent-blue-border);
 }
 
 .modal__close svg {
@@ -90,7 +90,7 @@
     padding-top: 1rem;
 }
 
-#modal-footer-actions {
+.modal__footer-actions {
     display: flex;
     gap: 0.75rem;
     justify-content: flex-end;

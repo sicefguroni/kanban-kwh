@@ -1,4 +1,4 @@
-import { DashboardDOM } from './dashboard-dom.js';
+import { DashboardDOM } from '../dom/dashboard-dom.js';
 
 export class DashboardModal {
     constructor() {
@@ -11,7 +11,7 @@ export class DashboardModal {
     }
 
     createModal() {
-        const $template = document.getElementById('modal-template');
+        const $template = document.getElementById('MODAL_TEMPLATE');
         if (!$template?.content) return;
 
         const modalClone = $template.content.cloneNode(true);
@@ -23,10 +23,10 @@ export class DashboardModal {
     }
 
     appendModalFields(modalClone) {
-        const $fieldsTemplate = document.getElementById('modal-field-template');
+        const $fieldsTemplate = document.getElementById('MODAL_FIELD_TEMPLATE');
         if (!$fieldsTemplate?.content) return;
 
-        const $fieldsContainer = modalClone.querySelector('#modal-form-fields');
+        const $fieldsContainer = modalClone.querySelector('#MODAL_FORM_FIELDS');
         if ($fieldsContainer) {
             $fieldsContainer.appendChild($fieldsTemplate.content.cloneNode(true));
         }
@@ -35,10 +35,10 @@ export class DashboardModal {
     initializeModalElements() {
         this.modal = {
             overlay: document.querySelector('.modal-overlay'),
-            form: document.getElementById('add-task-form'),
+            form: document.getElementById('ADD_TASK_FORM'),
             title: document.querySelector('.modal__title'),
             closeBtn: document.querySelector('.modal__close'),
-            footer: document.querySelector('#modal-footer-actions'),
+            footer: document.querySelector('#MODAL_FOOTER_ACTIONS'),
         };
     }
 
@@ -70,7 +70,7 @@ export class DashboardModal {
 
     getFocusableElements() {
         if (!this.modal?.overlay) return [];
-        const ids = ['task-title', 'task-description', 'task-status', 'task-deadline'];
+        const ids = ['TASK_TITLE', 'TASK_DESCRIPTION', 'TASK_STATUS', 'TASK_DEADLINE'];
         const list = [];
         const closeBtn = this.modal.overlay.querySelector('.modal__close');
         if (closeBtn && !closeBtn.disabled) list.push(closeBtn);
@@ -170,17 +170,17 @@ export class DashboardModal {
     }
 
     setStatusField(status) {
-        const $statusField = document.getElementById('task-status');
+        const $statusField = document.getElementById('TASK_STATUS');
         if ($statusField) {
             $statusField.value = status;
         }
     }
 
     populateFormFields(taskData) {
-        const $titleField = document.getElementById('task-title');
-        const $descField = document.getElementById('task-description');
-        const $statusField = document.getElementById('task-status');
-        const $deadlineField = document.getElementById('task-deadline');
+        const $titleField = document.getElementById('TASK_TITLE');
+        const $descField = document.getElementById('TASK_DESCRIPTION');
+        const $statusField = document.getElementById('TASK_STATUS');
+        const $deadlineField = document.getElementById('TASK_DEADLINE');
 
         if ($titleField) $titleField.value = taskData.title || '';
         if ($descField) $descField.value = taskData.description || '';
@@ -208,7 +208,7 @@ export class DashboardModal {
         const focusable = this.getFocusableElements();
         const firstInput = focusable.find((el) => {
             const id = el.id;
-            return id === 'task-title' || id === 'task-description' || id === 'task-status' || id === 'task-deadline';
+            return id === 'TASK_TITLE' || id === 'TASK_DESCRIPTION' || id === 'TASK_STATUS' || id === 'TASK_DEADLINE';
         }) || focusable[0];
         if (firstInput) {
             requestAnimationFrame(() => {

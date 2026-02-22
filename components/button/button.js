@@ -1,7 +1,7 @@
 const TEMPLATE_IDS = {
-    PRIMARY: 'button-primary-template',
-    PRIMARY_ICON: 'button-primary-icon-template',
-    SECONDARY: 'button-secondary-template',
+    PRIMARY: 'BUTTON_PRIMARY_TEMPLATE',
+    PRIMARY_ICON: 'BUTTON_PRIMARY_ICON_TEMPLATE',
+    SECONDARY: 'BUTTON_SECONDARY_TEMPLATE',
 };
 
 function _getTemplateId(variant, withIcon) {

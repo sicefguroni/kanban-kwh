@@ -1,7 +1,7 @@
 import { renderButton } from '../button/button.js';
 
-const TEMPLATE_ID = 'modal-template';
-const FIELDS_TEMPLATE_ID = 'modal-field-template';
+const TEMPLATE_ID = 'MODAL_TEMPLATE';
+const FIELDS_TEMPLATE_ID = 'MODAL_FIELD_TEMPLATE';
 const CLASS_OPEN = 'is-open';
 
 let modalOverlay = null;
@@ -44,14 +44,14 @@ export function initModal({ onSubmit } = {}) {
 }
 
 function _injectFields(modalClone, fieldsTemplate) {
-    const container = modalClone.querySelector('#modal-form-fields');
+    const container = modalClone.querySelector('#MODAL_FORM_FIELDS');
     if (container && fieldsTemplate?.content) {
         container.appendChild(fieldsTemplate.content.cloneNode(true));
     }
 }
 
 function _renderFooterButtons(overlay) {
-    const container = overlay.querySelector('#modal-footer-actions');
+    const container = overlay.querySelector('#MODAL_FOOTER_ACTIONS');
     if (!container) return;
 
     renderButton({
@@ -72,7 +72,7 @@ function _renderFooterButtons(overlay) {
 function _attachEventListeners(overlay, onSubmit) {
     const closeBtn = overlay.querySelector('.modal__close');
     const cancelBtn = overlay.querySelector('.modal__cancel');
-    const form = overlay.querySelector('#add-task-form');
+    const form = overlay.querySelector('#ADD_TASK_FORM');
 
     const handleClose = () => closeModal();
 

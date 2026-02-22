@@ -32,4 +32,16 @@ html, body {
     --primary-text-color: #0A0A0A;
     --secondary-text-color: #717182;
     --primary-border-color: #717182;
+    /* Red / Yellow / Blue theme accents */
+    --accent-red: #dc2626;
+    --accent-red-dark: #b91c1c;
+    --accent-red-muted: rgba(220, 38, 38, 0.12);
+    --accent-yellow: #eab308;
+    --accent-yellow-dark: #ca8a04;
+    --accent-yellow-muted: rgba(234, 179, 8, 0.15);
+    --accent-blue: #2563eb;
+    --accent-blue-dark: #1d4ed8;
+    --accent-blue-muted: rgba(37, 99, 235, 0.12);
+    --accent-blue-border: rgba(37, 99, 235, 0.35);
+    --accent-blue-border-soft: rgba(37, 99, 235, 0.2);
 }

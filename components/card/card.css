@@ -13,7 +13,7 @@
 
 .kanban-card:hover {
     transform: translateY(-1px);
-    border-color: rgba(59, 130, 246, 0.2);
+    border-color: var(--accent-blue-border-soft);
 }
 
 .kanban-card:active {
@@ -120,7 +120,7 @@
 /* Keyboard focus: same as hover so selection is obvious and consistent */
 .kanban-card.is-keyboard-focused {
     transform: translateY(-1px);
-    border-color: rgba(59, 130, 246, 0.25);
+    border-color: var(--accent-blue-border);
 }
 
 .kanban-card__action-btn {
@@ -154,7 +154,7 @@
     transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
                 opacity 0.15s ease;
     z-index: 1000;
-    border: 2px solid rgba(59, 130, 246, 0.5);
+    border: 2px solid var(--accent-blue);
     background-color: rgba(255, 255, 255, 0.98);
 }
 
@@ -163,31 +163,31 @@
 }
 
 .kanban-card.is-drag-over {
-    border-color: var(--tertiary-color);
-    background-color: var(--secondary-color);
+    border-color: var(--accent-yellow);
+    background-color: var(--accent-yellow-muted);
 }
 
 .kanban-card__edit-btn {
-    color: #64748b;
+    color: var(--secondary-text-color);
     width: 16px;
     height: 16px;
 }
 
 .kanban-card__edit-btn:hover {
-    background-color: #f1f5f9;
-    color: #1e293b;
+    background-color: var(--accent-blue-muted);
+    color: var(--accent-blue-dark);
     transform: scale(1.15);
 }
 
 .kanban-card__delete-btn {
-    color: #ef4444;
+    color: var(--accent-red);
     width: 16px;
     height: 16px;
 }
 
 .kanban-card__delete-btn:hover {
-    background-color: #fee2e2;
-    color: #b91c1c;
+    background-color: var(--accent-red-muted);
+    color: var(--accent-red-dark);
     transform: scale(1.15);
 }
 
@@ -209,7 +209,8 @@
 .kanban-card:has(.kanban-card__checkbox:checked) .kanban-card__description,
 .kanban-card:has(.kanban-card__checkbox:checked) .kanban-card__deadline {
     text-decoration: line-through;
-    color: #888;
+    color: var(--secondary-text-color);
+    opacity: 0.75;
     transition: all 0.3s ease;
 }
 
@@ -255,13 +256,13 @@
     }
 
     .kanban-card__edit-btn {
-        color: #64748b;
+        color: var(--secondary-text-color);
         width: 20px;
         height: 20px;
     }
 
     .kanban-card__delete-btn {
-        color: #ef4444;
+        color: var(--accent-red);
         width: 20px;
         height: 20px;
     }
@@ -302,13 +303,13 @@
     }
 
     .kanban-card__edit-btn {
-        color: #64748b;
+        color: var(--secondary-text-color);
         width: 24px;
         height: 24px;
     }
 
     .kanban-card__delete-btn {
-        color: #ef4444;
+        color: var(--accent-red);
         width: 24px;
         height: 24px;
     }

@@ -34,12 +34,13 @@
 
 .modal__input:focus {
     outline: none;
-    border-color: rgba(59, 130, 246, 0.35);
+    border-color: var(--accent-blue-border);
+    box-shadow: 0 0 0 1px var(--accent-blue-muted);
 }
 
 .modal__input:focus:invalid {
     box-shadow: none;
-    border-color: rgba(59, 130, 246, 0.35);
+    border-color: var(--accent-blue-border);
 }
 
 .modal__textarea {

@@ -1,11 +1,11 @@
 import { StorageService } from '../../services/storage-service.js';
 import { COLUMN_STATUSES } from './constants.js';
-import { DashboardDOM } from './dashboard-dom.js';
-import { DashboardDeleteModal } from './dashboard-delete-modal.js';
-import { setupKeyboard } from './dashboard-keyboard.js';
-import { DashboardModal } from './dashboard-modal.js';
-import { setupProximitySnapping } from './dashboard-proximity.js';
-import { DashboardRender } from './dashboard-render.js';
+import { DashboardDOM } from './dom/dashboard-dom.js';
+import { DashboardRender } from './dom/dashboard-render.js';
+import { DashboardDeleteModal } from './modals/dashboard-delete-modal.js';
+import { DashboardModal } from './modals/dashboard-modal.js';
+import { setupKeyboard } from './interactions/dashboard-keyboard.js';
+import { setupProximitySnapping } from './interactions/dashboard-proximity.js';
 
 const COMPONENTS = [
     'pages/dashboard/dashboard.html',
@@ -48,14 +48,14 @@ class KanbanDashboard {
                 count: 0,
                 shortcutKey: String(index + 1),
             });
-            columnInstance.render('#dashboard-grid .app');
+            columnInstance.render('#DASHBOARD_GRID .app');
             this.columnInstances[status] = columnInstance;
             this.attachColumnListeners(columnInstance, status);
         });
     }
 
     initAddTaskButton() {
-        const $container = document.getElementById('add-task-btn-container');
+        const $container = document.getElementById('ADD_TASK_BTN_CONTAINER');
         if (!$container) return;
         const $btn = DashboardDOM.createAddTaskButton();
         $container.appendChild($btn);
@@ -65,7 +65,7 @@ class KanbanDashboard {
 
     initMobileDropBar() {
         const dashboard = document.querySelector('.dashboard');
-        if (!dashboard || document.getElementById('mobile-drop-bar')) return;
+        if (!dashboard || document.getElementById('MOBILE_DROP_BAR')) return;
 
         const self = this;
         const mobileMql = window.matchMedia('(max-width: 767px)');
@@ -73,7 +73,7 @@ class KanbanDashboard {
         let overlay = null;
 
         const bar = document.createElement('div');
-        bar.id = 'mobile-drop-bar';
+        bar.id = 'MOBILE_DROP_BAR';
         bar.className = 'mobile-drop-bar';
         bar.setAttribute('aria-label', 'Drop zone for moving tasks');
         bar.innerHTML = COLUMN_STATUSES.map(
@@ -131,7 +131,7 @@ class KanbanDashboard {
         function showOverlay() {
             if (overlay) return;
             overlay = document.createElement('div');
-            overlay.id = 'mobile-drop-overlay';
+            overlay.id = 'MOBILE_DROP_OVERLAY';
             overlay.className = 'mobile-drop-overlay is-visible';
             overlay.setAttribute('aria-hidden', 'true');
 

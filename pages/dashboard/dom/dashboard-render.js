@@ -1,5 +1,5 @@
-import { StorageService } from '../../services/storage-service.js';
-import { COLUMN_STATUSES } from './constants.js';
+import { StorageService } from '../../../services/storage-service.js';
+import { COLUMN_STATUSES } from '../constants.js';
 import { DashboardDOM } from './dashboard-dom.js';
 
 export class DashboardRender {

@@ -40,7 +40,7 @@
     width: 100%;
 }
 
-#add-task-btn-container {
+.dashboard__add-task-container {
     display: contents;
 }
 
@@ -107,13 +107,13 @@
 
 .keyboard-help__panel {
     position: relative;
-    background: var(--primary-color, #1e1e2e);
-    border: 1px solid rgba(99, 102, 241, 0.35);
+    background: var(--primary-color);
+    border: 1px solid var(--accent-blue-border);
     border-radius: 0.5rem;
     padding: 1rem 1.25rem;
     min-width: 280px;
     max-width: 360px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
 
 .keyboard-help__header {
@@ -122,22 +122,22 @@
     justify-content: space-between;
     margin-bottom: 0.75rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(99, 102, 241, 0.25);
+    border-bottom: 1px solid var(--accent-blue-border-soft);
 }
 
 .keyboard-help__title {
     font-size: 0.9rem;
     font-weight: 600;
-    color: rgba(99, 102, 241, 0.95);
+    color: var(--accent-blue-dark);
 }
 
 .keyboard-help__close {
     padding: 0.2rem 0.4rem;
     font-size: 0.75rem;
-    background: rgba(99, 102, 241, 0.15);
+    background: var(--accent-blue-muted);
     border-radius: 0.25rem;
     cursor: pointer;
-    color: rgba(99, 102, 241, 0.9);
+    color: var(--accent-blue-dark);
 }
 
 .keyboard-help__grid {
@@ -158,17 +158,17 @@
     padding: 0.15rem 0.35rem;
     font-family: inherit;
     font-size: 0.75rem;
-    background: rgba(99, 102, 241, 0.12);
-    border: 1px solid rgba(99, 102, 241, 0.3);
+    background: var(--accent-blue-muted);
+    border: 1px solid var(--accent-blue-border-soft);
     border-radius: 0.25rem;
-    color: rgba(99, 102, 241, 0.95);
+    color: var(--accent-blue-dark);
     min-width: 1.5rem;
     text-align: center;
 }
 
 .keyboard-help__row span {
     margin-left: 0.25rem;
-    color: var(--primary-text-color, #cdd6f4);
+    color: var(--primary-text-color);
 }
 
 /* Keyboard indicator (header) */
@@ -183,23 +183,23 @@
     gap: 0.35rem;
     padding: 0.35rem 0.6rem;
     font-size: 0.8rem;
-    background: rgba(99, 102, 241, 0.08);
-    border: 1px solid rgba(99, 102, 241, 0.25);
+    background: var(--accent-blue-muted);
+    border: 1px solid var(--accent-blue-border-soft);
     border-radius: 0.35rem;
-    color: rgba(99, 102, 241, 0.9);
+    color: var(--accent-blue-dark);
     cursor: pointer;
     transition: background 0.2s, border-color 0.2s;
 }
 
 .keyboard-indicator__btn:hover {
-    background: rgba(99, 102, 241, 0.14);
-    border-color: rgba(99, 102, 241, 0.4);
+    background: rgba(37, 99, 235, 0.18);
+    border-color: var(--accent-blue-border);
 }
 
 .keyboard-indicator__btn kbd {
     font-size: 0.9em;
     padding: 0.1rem 0.25rem;
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(37, 99, 235, 0.15);
     border-radius: 0.2rem;
 }
 
@@ -227,9 +227,9 @@
         gap: 0.25rem;
         padding: 0.5rem;
         padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
-        background: var(--primary-color, #1e1e2e);
-        border-top: 1px solid rgba(99, 102, 241, 0.25);
-        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
+        background: var(--primary-color);
+        border-top: 1px solid var(--accent-blue-border-soft);
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
         transition: transform 0.25s ease;
     }
 
@@ -248,16 +248,16 @@
         padding: 0 0.5rem;
         font-size: 0.8rem;
         font-weight: 500;
-        color: var(--primary-text-color, #cdd6f4);
-        background: rgba(99, 102, 241, 0.08);
-        border: 2px dashed rgba(99, 102, 241, 0.3);
+        color: var(--primary-text-color);
+        background: var(--accent-blue-muted);
+        border: 2px dashed var(--accent-blue-border-soft);
         border-radius: 0.5rem;
         transition: background 0.2s, border-color 0.2s, color 0.2s;
     }
 
     .mobile-drop-bar__zone.is-drag-over {
-        background: rgba(99, 102, 241, 0.2);
-        border-color: rgba(99, 102, 241, 0.6);
-        color: rgba(99, 102, 241, 0.95);
+        background: rgba(37, 99, 235, 0.2);
+        border-color: var(--accent-blue);
+        color: var(--accent-blue-dark);
     }
 }

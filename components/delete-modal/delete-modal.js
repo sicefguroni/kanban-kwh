@@ -1,6 +1,6 @@
 import { renderButton } from '../button/button.js';
 
-const TEMPLATE_ID = 'delete-modal-template';
+const TEMPLATE_ID = 'DELETE_MODAL_TEMPLATE';
 const CLASS_OPEN = 'is-open';
 
 let modalOverlay = null;
@@ -50,7 +50,7 @@ export function initDeleteModal({ onSubmit } = {}) {
 }
 
 function _renderFooterButtons(overlay) {
-  const container = overlay.querySelector('#modal-footer-actions');
+  const container = overlay.querySelector('#MODAL_FOOTER_ACTIONS');
   if (!container) return;
 
   renderButton({
@@ -92,7 +92,7 @@ function _getFocusable(overlay) {
 function _attachEventListeners(overlay, onSubmit) {
   const closeBtn = overlay.querySelector('.modal__close');
   const cancelBtn = overlay.querySelector('.modal__cancel');
-  const form = overlay.querySelector('#delete-task-form');
+  const form = overlay.querySelector('#DELETE_TASK_FORM');
 
   const handleClose = () => closeDeleteModal();
 

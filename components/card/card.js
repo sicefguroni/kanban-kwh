@@ -1,6 +1,6 @@
 import { formatDateString } from '../../utils/format-date.js';
 
-const TEMPLATE_ID = 'card-template';
+const TEMPLATE_ID = 'CARD_TEMPLATE';
 const DEFAULT_CONTAINER = '.app';
 
 export class KanbanCard {

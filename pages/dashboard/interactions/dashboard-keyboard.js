@@ -1,4 +1,4 @@
-import { COLUMN_STATUSES } from './constants.js';
+import { COLUMN_STATUSES } from '../constants.js';
 
 const FOCUS_CLASS_COLUMN = 'is-keyboard-focused';
 const FOCUS_CLASS_CARD = 'is-keyboard-focused';
@@ -78,13 +78,13 @@ export function setupKeyboard(ctx) {
     }
 
     function showHelp() {
-        const existing = document.getElementById('keyboard-help');
+        const existing = document.getElementById('KEYBOARD_HELP');
         if (existing) {
             existing.classList.toggle('is-visible');
             return;
         }
         const $help = document.createElement('div');
-        $help.id = 'keyboard-help';
+        $help.id = 'KEYBOARD_HELP';
         $help.className = 'keyboard-help';
         $help.setAttribute('role', 'dialog');
         $help.setAttribute('aria-label', 'Keyboard shortcuts');
@@ -138,7 +138,7 @@ export function setupKeyboard(ctx) {
         }
         if (target.closest('input, textarea, select') || target.isContentEditable) return;
 
-        const $help = document.getElementById('keyboard-help');
+        const $help = document.getElementById('KEYBOARD_HELP');
         if ($help?.classList.contains('is-visible')) {
             if (e.key === 'Escape') $help.classList.remove('is-visible');
             return;
@@ -295,9 +295,9 @@ export function setupKeyboard(ctx) {
 
     function createIndicator() {
         const header = document.querySelector('.dashboard__header');
-        if (!header || document.getElementById('keyboard-indicator')) return;
+        if (!header || document.getElementById('KEYBOARD_INDICATOR')) return;
         const wrap = document.createElement('div');
-        wrap.id = 'keyboard-indicator';
+        wrap.id = 'KEYBOARD_INDICATOR';
         wrap.className = 'keyboard-indicator';
         wrap.innerHTML = `
             <button type="button" class="keyboard-indicator__btn" data-action="help" aria-label="Keyboard shortcuts">

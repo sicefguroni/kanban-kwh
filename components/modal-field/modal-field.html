@@ -1,27 +1,27 @@
-<template id="modal-field-template">
+<template id="MODAL_FIELD_TEMPLATE">
     <div class="modal__field">
-        <label for="task-title" class="modal__label">Title</label>
-        <input type="text" id="task-title" name="title" class="modal__input" placeholder="Enter task title" required />
+        <label for="TASK_TITLE" class="modal__label">Title</label>
+        <input type="text" id="TASK_TITLE" name="title" class="modal__input" placeholder="Enter task title" required />
     </div>
     <div class="modal__field">
-        <label for="task-description" class="modal__label">Description</label>
-        <textarea id="task-description" name="description" class="modal__input modal__textarea" placeholder="Enter task description (optional)" rows="4"></textarea>
+        <label for="TASK_DESCRIPTION" class="modal__label">Description</label>
+        <textarea id="TASK_DESCRIPTION" name="description" class="modal__input modal__textarea" placeholder="Enter task description (optional)" rows="4"></textarea>
     </div>
     <div class="modal__field">
-        <label for="task-status" class="modal__label">Status</label>
-        <select id="task-status" name="status" class="modal__input modal__select">
+        <label for="TASK_STATUS" class="modal__label">Status</label>
+        <select id="TASK_STATUS" name="status" class="modal__input modal__select">
             <option value="To Do">To Do</option>
             <option value="In Progress">In Progress</option>
             <option value="Done">Done</option>
         </select>
     </div>
     <div class="modal__field">
-        <label for="task-deadline" class="modal__label">Deadline (Optional)</label>
+        <label for="TASK_DEADLINE" class="modal__label">Deadline (Optional)</label>
         <div class="modal__date-wrapper">
             <svg class="modal__date-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12.75 12.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM7.5 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM15 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM8.25 19.5h7.5A2.25 2.25 0 0 0 18 17.25V6.75A2.25 2.25 0 0 0 15.75 4.5h-7.5A2.25 2.25 0 0 0 6.25 6.75v10.5A2.25 2.25 0 0 0 8.25 19.5ZM6 6.75A.75.75 0 0 1 6.75 6h10.5a.75.75 0 0 1 .75.75v1.5H6V6.75Z" />
             </svg>
-            <input type="date" id="task-deadline" name="deadline" class="modal__input modal__date" placeholder="Pick a date" />
+            <input type="date" id="TASK_DEADLINE" name="deadline" class="modal__input modal__date" placeholder="Pick a date" />
         </div>
     </div>
 </template>

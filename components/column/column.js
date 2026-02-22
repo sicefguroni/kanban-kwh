@@ -1,4 +1,4 @@
-const TEMPLATE_ID = 'column-template';
+const TEMPLATE_ID = 'COLUMN_TEMPLATE';
 const DEFAULT_CONTAINER = '.app';
 const CARD_CLASS = 'kanban-card';
 const MOBILE_MQL = '(max-width: 767px)';
