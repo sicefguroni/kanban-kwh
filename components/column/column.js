@@ -185,6 +185,8 @@ export class KanbanColumn {
             }
 
             $toggle.hidden = false;
+            // Expand column by default on mobile so tasks are visible on landing
+            this.element.classList.add('is-mobile-expanded');
             this._refreshMobileEmptyState();
         };
 
