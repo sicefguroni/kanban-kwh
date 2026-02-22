@@ -10,12 +10,6 @@
     margin-bottom: 0.6rem;
 }
 
-.kanban-column__title-row {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}
-
 .kanban-column__toggle {
     display: inline-flex;
     align-items: center;
@@ -82,6 +76,18 @@
     border-color: rgba(59, 130, 246, 0.1);
 }
 
+.kanban-column[data-status="To Do"] .kanban-column__content {
+    background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 50%, #fecdd3 100%);
+}
+
+.kanban-column[data-status="In Progress"] .kanban-column__content {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fde68a 100%);
+}
+
+.kanban-column[data-status="Done"] .kanban-column__content {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #bbf7d0 100%);
+}
+
 .kanban-column__cards {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -133,6 +139,23 @@
     opacity: 0.5;
 }
 
+.kanban-column.is-mobile-empty .kanban-column__content {
+    position: relative;
+}
+
+.kanban-column.is-mobile-empty .kanban-column__content::after {
+    content: "No tasks yet";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-style: italic;
+    font-size: 0.9rem;
+    color: var(--secondary-text-color);
+    opacity: 0.85;
+    pointer-events: none;
+}
+
 @media (max-width: 767px) {
 
     .kanban-column__content {
@@ -140,7 +163,6 @@
         max-height: 110px;   
         overflow: hidden;    
     }
-
 
     .kanban-column__cards {
         min-height: 110px;
@@ -160,7 +182,7 @@
     }
 
     .kanban-column.is-mobile-empty .kanban-column__content {
-        min-height: 110px;
+        min-height: 1.8rem;
     }
 }
 
@@ -175,6 +197,6 @@
     }
 
     .kanban-column__content {
-        padding: 1rem;
+        padding: 1.8rem;
     }
 }
