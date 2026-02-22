@@ -56,6 +56,10 @@ export class KanbanColumn {
             $title.appendChild(document.createTextNode(' ' + this.title));
         }
         if ($count) $count.textContent = this.count;
+        const root = column.querySelector('.kanban-column');
+        if (root) {
+            root.setAttribute('data-status', this.title);
+    }
     }
 
     getCardsContainer() {
@@ -211,10 +215,6 @@ export class KanbanColumn {
 
     _refreshMobileEmptyState() {
         if (!this.element) return;
-        if (!this._mql.matches) {
-            this.element.classList.remove('is-mobile-empty');
-            return;
-        }
 
         const count = this.getCardCount();
         this.element.classList.toggle('is-mobile-empty', count === 0);
