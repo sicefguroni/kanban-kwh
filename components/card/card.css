@@ -67,6 +67,10 @@
 
 .kanban-card__content .kanban-card__description {
     display: none;
+    max-height: 80px;
+    overflow-y: auto;
+    word-break: break-word;
+    padding-right: 0.4rem;
 }
 
 .kanban-card__deadline {
@@ -233,6 +237,10 @@
 
     .kanban-card__content .kanban-card__description {
         display: block;
+        max-height: 80px;
+        overflow-y: auto;
+        word-break: break-word;
+        padding-right: 0.4rem;
     }
 
     .kanban-card__deadline p {
@@ -278,6 +286,10 @@
 
     .kanban-card__content .kanban-card__description {
         display: block;
+        max-height: 120px;
+        overflow-y: auto;
+        word-break: break-word;
+        padding-right: 0.4rem;
     }
 
     .kanban-card__deadline p {
@@ -313,5 +325,9 @@
 @media (max-width: 767px) {
     .kanban-column.is-mobile-expanded .kanban-card__content .kanban-card__description {
         display: block;
+        max-height: 80px;
+        overflow-y: auto;
+        word-break: break-word;
+        padding-right: 0.4rem;
     }
 }
