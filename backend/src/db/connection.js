@@ -1,7 +1,13 @@
 import pkg from 'pg';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const envPath = join(__dirname, '../../.env');
+
+dotenv.config({ path: envPath });
 
 const { Pool } = pkg;
 
