@@ -8,18 +8,23 @@ export class DashboardRender {
         this._onEdit = null;
         this._onDelete = null;
         this._afterRender = null;
+        this._renderChain = Promise.resolve();
     }
 
     async renderTasks(onEdit, onDelete) {
-        this._onEdit = onEdit;
-        this._onDelete = onDelete;
-        this.clearAllColumns();
-        for (const status of COLUMN_STATUSES) {
-            // Sequential rendering keeps DOM updates deterministic when the API is slow.
-            await this.renderTasksForStatus(status, onEdit, onDelete);
-        }
-        // Optional hook (used by the dashboard to re-apply keyboard focus).
-        this._afterRender?.();
+        this._renderChain = this._renderChain.then(async () => {
+            this._onEdit = onEdit;
+            this._onDelete = onDelete;
+            this.clearAllColumns();
+            for (const status of COLUMN_STATUSES) {
+                // Sequential rendering keeps DOM updates deterministic when the API is slow.
+                await this.renderTasksForStatus(status, onEdit, onDelete);
+            }
+            // Optional hook (used by the dashboard to re-apply keyboard focus).
+            this._afterRender?.();
+        });
+
+        return this._renderChain;
     }
 
     clearAllColumns() {

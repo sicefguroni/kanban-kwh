@@ -4,7 +4,6 @@
  */
 
 import wsService from '../../../services/websocket-service.js';
-import { StorageService } from '../../../services/storage-service.js';
 
 // Track subscriptions to avoid duplicates
 let isSetup = false;
@@ -27,54 +26,17 @@ export function setupWebSocketIntegration({ userId, onTaskCreated, onTaskUpdated
   }
 
   isSetup = true;
-  const unsubscribers = [];
 
-  // Handle task created
-  const unsubTaskCreated = wsService.on('TASK_CREATED', (task) => {
-    console.log('📥 Task created:', task.title);
-    
-    // Convert server format to client format
-    const clientTask = convertServerToClientFormat(task);
-    
-    // Add to storage
-    const tasks = StorageService.getTasks();
-    if (!tasks.find(t => t.id === clientTask.id)) {
-      tasks.push(clientTask);
-      StorageService.saveTasks(tasks);
-      
-      if (onTaskCreated) onTaskCreated(clientTask);
-    }
+  // Use a single callback path to avoid duplicate rerenders per websocket event.
+  wsService.setTaskUpdateHandler(async (task, type) => {
+    if (type === 'TASK_CREATED' && onTaskCreated) await onTaskCreated(task);
+    if (type === 'TASK_UPDATED' && onTaskUpdated) await onTaskUpdated(task);
+    if (type === 'TASK_DELETED' && onTaskDeleted) await onTaskDeleted(task.id);
   });
-  unsubscribers.push(unsubTaskCreated);
-
-  // Handle task updated
-  const unsubTaskUpdated = wsService.on('TASK_UPDATED', (task) => {
-    console.log('📥 Task updated:', task.title);
-    
-    // Convert server format to client format
-    const clientTask = convertServerToClientFormat(task);
-    
-    // Update in storage
-    StorageService.updateTask(clientTask.id, clientTask);
-    
-    if (onTaskUpdated) onTaskUpdated(clientTask);
-  });
-  unsubscribers.push(unsubTaskUpdated);
-
-  // Handle task deleted
-  const unsubTaskDeleted = wsService.on('TASK_DELETED', (task) => {
-    console.log('📥 Task deleted:', task.id);
-    
-    // Remove from storage
-    StorageService.deleteTask(task.id);
-    
-    if (onTaskDeleted) onTaskDeleted(task.id);
-  });
-  unsubscribers.push(unsubTaskDeleted);
 
   // Return cleanup function
   return () => {
-    unsubscribers.forEach(unsub => unsub());
+    wsService.setTaskUpdateHandler(null);
     isSetup = false;
   };
 }
@@ -100,26 +62,6 @@ export async function connectWebSocket(userId) {
 export function disconnectWebSocket() {
   wsService.disconnect();
   console.log('✓ WebSocket disconnected');
-}
-
-/**
- * Convert server task format to client task format
- * Server format uses: id, user_id, title, description, status, position, created_at, updated_at
- * Client format uses: id, title, description, status, order (not position), createdAt, deadline
- * 
- * @param {object} serverTask - Task from server
- * @returns {object} Task in client format
- */
-function convertServerToClientFormat(serverTask) {
-  return {
-    id: serverTask.id,
-    title: serverTask.title,
-    description: serverTask.description || '',
-    status: serverTask.status,
-    order: serverTask.position || 0,
-    createdAt: serverTask.created_at,
-    deadline: '', // Server doesn't have deadline field yet
-  };
 }
 
 /**
