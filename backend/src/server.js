@@ -18,20 +18,64 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const envPath = join(__dirname, '../.env');
 
-dotenv.config({ path: envPath });
+dotenv.config({ path: envPath, override: true });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const server = createServer(app);
 
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5500',
+  'http://127.0.0.1:5500'
+];
+
+const envOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.FRONTEND_URLS,
+  process.env.CORS_ALLOWED_ORIGINS
+]
+  .filter(Boolean)
+  .flatMap((value) => value.split(',').map((origin) => origin.trim()))
+  .filter(Boolean);
+
+const allowedOrigins = [...new Set([...defaultAllowedOrigins, ...envOrigins])];
+
+const defaultAllowedOriginPatterns = process.env.NODE_ENV === 'production'
+  ? []
+  : [
+      /^https:\/\/[a-z0-9-]+\.ngrok-free\.app$/i,
+      /^https:\/\/[a-z0-9-]+\.ngrok-free\.dev$/i
+    ];
+
+const corsOptions = {
+  origin(origin, callback) {
+    // Allow non-browser clients (e.g. curl/Postman) that don't send an Origin header.
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    const isAllowedOrigin =
+      allowedOrigins.includes(origin) ||
+      defaultAllowedOriginPatterns.some((pattern) => pattern.test(origin));
+
+    if (isAllowedOrigin) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true
+};
+
 // Initialize Passport with Google OAuth strategy
 initializeGoogleStrategy(passport);
 
 // Middleware
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
-}));
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Session middleware (required for Passport)
@@ -50,7 +94,7 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 // OPTIONS preflight handler for CORS
-app.options('*', cors());
+app.options('*', cors(corsOptions));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -144,9 +188,11 @@ async function start() {
       console.log('  DELETE /api/users/:id - Delete user (requires auth)');
       console.log('');
       console.log('  GET    /api/tasks/user/:userId - Get tasks for user (requires auth)');
+      console.log('  GET    /api/tasks - Get tasks for current user (requires auth)');
       console.log('  GET    /api/tasks/status/:status - Get tasks by status (requires auth)');
       console.log('  GET    /api/tasks/:id - Get task by ID (requires auth)');
       console.log('  POST   /api/tasks - Create task (requires auth)');
+      console.log('  POST   /api/tasks/sync - Batch sync offline actions (requires auth)');
       console.log('  PUT    /api/tasks/:id - Update task (requires auth)');
       console.log('  DELETE /api/tasks/:id - Delete task (requires auth)');
       console.log('');
