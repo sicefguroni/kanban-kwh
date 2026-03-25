@@ -1,8 +1,14 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import pool from '../db/connection.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// All task routes require JWT authentication
+router.use(authMiddleware);
+
+// ===== PROTECTED TASK ROUTES =====
 
 // Get all tasks for a user
 router.get('/user/:userId', async (req, res) => {
