@@ -3,7 +3,8 @@
     flex-direction: column;
     padding: 0 0.2rem;
     gap: 0.2rem;
-    min-height: 92vh;
+    min-width: 100vw;
+    min-height: 100vh;    
 }
 
 .dashboard__header {
@@ -12,16 +13,49 @@
     justify-content: space-between;
     align-items: center;
     gap: 0.6rem;
-}
-
-.dashboard__title {
-    font-size: 1.4rem;
+    flex-wrap: wrap;
 }
 
 .dashboard__actions {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.dashboard__auth-actions {
+    margin-left: auto;
+}
+
+.auth-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.auth-actions__user {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.auth-actions__logout-btn {
+    padding: 0.5rem 1rem;
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.auth-actions__logout-btn:hover {
+    background: #d32f2f;
+}
+
+.auth-actions__logout-btn:active {
+    background: #c62828;
 }
 
 .dashboard__grid {
@@ -39,7 +73,7 @@
     width: 100%;
 }
 
-.dashboard__add-task-container {
+#add-task-btn-container {
     display: contents;
 }
 
@@ -73,190 +107,5 @@
     .dashboard__grid .app {
         flex-direction: row;
         gap: 2rem;
-    }
-}
-
-/* Keyboard help overlay */
-.keyboard-help {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    pointer-events: none;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s ease, visibility 0.2s ease;
-}
-
-.keyboard-help.is-visible {
-    pointer-events: auto;
-    opacity: 1;
-    visibility: visible;
-}
-
-.keyboard-help__backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    cursor: pointer;
-}
-
-.keyboard-help__panel {
-    position: relative;
-    background: var(--primary-color);
-    border: 1px solid var(--accent-blue-border);
-    border-radius: 0.5rem;
-    padding: 1rem 1.25rem;
-    min-width: 280px;
-    max-width: 360px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-}
-
-.keyboard-help__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--accent-blue-border-soft);
-}
-
-.keyboard-help__title {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--accent-blue-dark);
-}
-
-.keyboard-help__close {
-    padding: 0.2rem 0.4rem;
-    font-size: 0.75rem;
-    background: var(--accent-blue-muted);
-    border-radius: 0.25rem;
-    cursor: pointer;
-    color: var(--accent-blue-dark);
-}
-
-.keyboard-help__grid {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-}
-
-.keyboard-help__row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8rem;
-}
-
-.keyboard-help__row kbd {
-    display: inline-block;
-    padding: 0.15rem 0.35rem;
-    font-family: inherit;
-    font-size: 0.75rem;
-    background: var(--accent-blue-muted);
-    border: 1px solid var(--accent-blue-border-soft);
-    border-radius: 0.25rem;
-    color: var(--accent-blue-dark);
-    min-width: 1.5rem;
-    text-align: center;
-}
-
-.keyboard-help__row span {
-    margin-left: 0.25rem;
-    color: var(--primary-text-color);
-}
-
-/* Keyboard indicator (header) */
-.keyboard-indicator {
-    display: flex;
-    align-items: center;
-}
-
-.keyboard-indicator__btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.35rem 0.6rem;
-    font-size: 0.8rem;
-    background: var(--accent-blue-muted);
-    border: 1px solid var(--accent-blue-border-soft);
-    border-radius: 0.35rem;
-    color: var(--accent-blue-dark);
-    cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
-}
-
-.keyboard-indicator__btn:hover {
-    background: rgba(37, 99, 235, 0.18);
-    border-color: var(--accent-blue-border);
-}
-
-.keyboard-indicator__btn kbd {
-    font-size: 0.9em;
-    padding: 0.1rem 0.25rem;
-    background: rgba(37, 99, 235, 0.15);
-    border-radius: 0.2rem;
-}
-
-/* Mobile drop: full-screen hitbox overlay + small bar at bottom (mobile only) */
-.mobile-drop-bar,
-.mobile-drop-overlay {
-    display: none;
-}
-
-@media (max-width: 767px) {
-    .mobile-drop-overlay {
-        display: block;
-        position: fixed;
-        inset: 0;
-        z-index: 1001;
-    }
-
-    .mobile-drop-bar {
-        display: none;
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        z-index: 100;
-        gap: 0.25rem;
-        padding: 0.5rem;
-        padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
-        background: var(--primary-color);
-        border-top: 1px solid var(--accent-blue-border-soft);
-        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
-        transition: transform 0.25s ease;
-    }
-
-    .mobile-drop-bar.is-visible {
-        display: flex;
-        transform: translateY(0);
-        z-index: 1002;
-    }
-
-    .mobile-drop-bar__zone {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 2.75rem;
-        padding: 0 0.5rem;
-        font-size: 0.8rem;
-        font-weight: 500;
-        color: var(--primary-text-color);
-        background: var(--accent-blue-muted);
-        border: 2px dashed var(--accent-blue-border-soft);
-        border-radius: 0.5rem;
-        transition: background 0.2s, border-color 0.2s, color 0.2s;
-    }
-
-    .mobile-drop-bar__zone.is-drag-over {
-        background: rgba(37, 99, 235, 0.2);
-        border-color: var(--accent-blue);
-        color: var(--accent-blue-dark);
     }
 }

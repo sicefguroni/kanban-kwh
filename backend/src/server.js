@@ -1,6 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import session from 'express-session';
+import passport from 'passport';
+import initializeGoogleStrategy from './middleware/google-oauth.js';
 import { createServer } from 'http';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -20,6 +23,9 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const server = createServer(app);
 
+// Initialize Passport with Google OAuth strategy
+initializeGoogleStrategy(passport);
+
 // Middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -27,6 +33,21 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Session middleware (required for Passport)
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-session-secret-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000
+  }
+}));
+
+// Passport initialization
+app.use(passport.initialize());
+app.use(passport.session());
 // OPTIONS preflight handler for CORS
 app.options('*', cors());
 
@@ -47,6 +68,23 @@ app.get('/api', (req, res) => {
 // Routes
 app.use('/api/users', usersRouter);
 app.use('/api/tasks', tasksRouter);
+
+// Google OAuth endpoint - only if configured
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  app.get('/api/users/auth/google', 
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+  );
+
+  app.get('/api/users/auth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/login.html' }),
+    (req, res) => {
+      const user = req.user;
+      const token = user.token;
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      res.redirect(`${frontendUrl}/login.html?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}`);
+    }
+  );
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -86,6 +124,28 @@ async function start() {
       console.log(`✓ Server running on http://localhost:${PORT}`);
       console.log(`✓ WebSocket available at ws://localhost:${PORT}`);
       console.log(`✓ API Base URL: http://localhost:${PORT}/api`);
+      console.log('\n📋 Authentication Methods:');
+      console.log('  ✓ Email/Password login');
+      if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+        console.log('  ✓ Google OAuth');
+      } else {
+        console.log('  ⚠️  Google OAuth (not configured)');
+      }
+      console.log('\n📍 Available endpoints:');
+      console.log('  POST   /api/users/register - Register new user');
+      console.log('  POST   /api/users/login - Login user');
+      console.log('  GET    /api/users/me - Get current user (requires auth)');
+      console.log('  GET    /api/users - Get all users (requires auth)');
+      console.log('  GET    /api/users/:id - Get user by ID (requires auth)');
+      console.log('  PUT    /api/users/:id - Update user (requires auth)');
+      console.log('  DELETE /api/users/:id - Delete user (requires auth)');
+      console.log('');
+      console.log('  GET    /api/tasks/user/:userId - Get tasks for user (requires auth)');
+      console.log('  GET    /api/tasks/status/:status - Get tasks by status (requires auth)');
+      console.log('  GET    /api/tasks/:id - Get task by ID (requires auth)');
+      console.log('  POST   /api/tasks - Create task (requires auth)');
+      console.log('  PUT    /api/tasks/:id - Update task (requires auth)');
+      console.log('  DELETE /api/tasks/:id - Delete task (requires auth)');
       console.log('');
       if (dbConnected) {
         console.log('✓ Database connected');
