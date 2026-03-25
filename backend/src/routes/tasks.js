@@ -1,6 +1,7 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import pool from '../db/connection.js';
+import { broadcastTaskEvent } from '../websocket/handler.js';
 
 const router = express.Router();
 
@@ -71,7 +72,13 @@ router.post('/', async (req, res) => {
       'INSERT INTO tasks (id, user_id, title, description, status, position, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, user_id, title, description, status, position, created_at, updated_at',
       [id, userId, title, description, status, position, now, now]
     );
-    res.status(201).json(result.rows[0]);
+    
+    const task = result.rows[0];
+    
+    // Broadcast task created event
+    broadcastTaskEvent(task, 'TASK_CREATED', userId);
+    
+    res.status(201).json(task);
   } catch (error) {
     console.error('Error creating task:', error);
     res.status(500).json({ error: 'Failed to create task' });
@@ -84,6 +91,18 @@ router.put('/:id', async (req, res) => {
   const now = new Date();
 
   try {
+    // First, get the task to find the userId
+    const taskCheck = await pool.query(
+      'SELECT user_id FROM tasks WHERE id = $1',
+      [req.params.id]
+    );
+
+    if (taskCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    const userId = taskCheck.rows[0].user_id;
+
     const updates = [];
     const params = [];
     let paramCount = 1;
@@ -116,10 +135,12 @@ router.put('/:id', async (req, res) => {
     const query = `UPDATE tasks SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, user_id, title, description, status, position, created_at, updated_at`;
     const result = await pool.query(query, params);
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Task not found' });
-    }
-    res.json(result.rows[0]);
+    const task = result.rows[0];
+    
+    // Broadcast task updated event
+    broadcastTaskEvent(task, 'TASK_UPDATED', userId);
+    
+    res.json(task);
   } catch (error) {
     console.error('Error updating task:', error);
     res.status(500).json({ error: 'Failed to update task' });
@@ -129,10 +150,24 @@ router.put('/:id', async (req, res) => {
 // Delete task
 router.delete('/:id', async (req, res) => {
   try {
-    const result = await pool.query('DELETE FROM tasks WHERE id = $1 RETURNING id', [req.params.id]);
-    if (result.rows.length === 0) {
+    // First, get the task to find the userId
+    const taskCheck = await pool.query(
+      'SELECT id, user_id FROM tasks WHERE id = $1',
+      [req.params.id]
+    );
+
+    if (taskCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Task not found' });
     }
+
+    const { id, user_id } = taskCheck.rows[0];
+
+    // Delete the task
+    await pool.query('DELETE FROM tasks WHERE id = $1', [req.params.id]);
+
+    // Broadcast task deleted event
+    broadcastTaskEvent({ id, user_id }, 'TASK_DELETED', user_id);
+
     res.json({ message: 'Task deleted successfully' });
   } catch (error) {
     console.error('Error deleting task:', error);

@@ -1,15 +1,24 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import initializeDatabase from './db/init.js';
 import pool from './db/connection.js';
 import usersRouter from './routes/users.js';
 import tasksRouter from './routes/tasks.js';
+import { initializeWebSocket } from './websocket/handler.js';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const envPath = join(__dirname, '../.env');
+
+dotenv.config({ path: envPath });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const server = createServer(app);
 
 // Middleware
 app.use(cors({
@@ -18,9 +27,21 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// OPTIONS preflight handler for CORS
+app.options('*', cors());
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+// API info endpoint
+app.get('/api', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    message: 'KWH Kanban API',
+    version: '1.0.0'
+  });
 });
 
 // Routes
@@ -43,33 +64,37 @@ app.use((req, res) => {
 // Start server
 async function start() {
   try {
-    // Test database connection
-    const client = await pool.connect();
-    console.log('✓ Connected to PostgreSQL');
-    client.release();
+    // Initialize WebSocket server
+    initializeWebSocket(server);
+    
+    // Try to connect to database (non-blocking)
+    let dbConnected = false;
+    try {
+      const client = await Promise.race([
+        pool.connect(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+      ]);
+      console.log('✓ Connected to PostgreSQL');
+      client.release();
+      dbConnected = true;
+      await initializeDatabase();
+    } catch (dbError) {
+      console.warn('⚠ Could not connect to database:', dbError.message);
+    }
 
-    // Initialize database schema
-    await initializeDatabase();
-
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`✓ Server running on http://localhost:${PORT}`);
+      console.log(`✓ WebSocket available at ws://localhost:${PORT}`);
       console.log(`✓ API Base URL: http://localhost:${PORT}/api`);
-      console.log('\nAvailable endpoints:');
-      console.log('  GET    /api/users - Get all users');
-      console.log('  GET    /api/users/:id - Get user by ID');
-      console.log('  POST   /api/users - Create user');
-      console.log('  PUT    /api/users/:id - Update user');
-      console.log('  DELETE /api/users/:id - Delete user');
       console.log('');
-      console.log('  GET    /api/tasks/user/:userId - Get tasks for user');
-      console.log('  GET    /api/tasks/status/:status - Get tasks by status');
-      console.log('  GET    /api/tasks/:id - Get task by ID');
-      console.log('  POST   /api/tasks - Create task');
-      console.log('  PUT    /api/tasks/:id - Update task');
-      console.log('  DELETE /api/tasks/:id - Delete task');
+      if (dbConnected) {
+        console.log('✓ Database connected');
+      } else {
+        console.log('⚠ Database not available - restart after PostgreSQL is running');
+      }
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('Failed to start server:', error.message);
     process.exit(1);
   }
 }

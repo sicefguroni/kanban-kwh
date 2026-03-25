@@ -1,4 +1,5 @@
 import { StorageService } from '../../services/storage-service.js';
+import APIService from '../../services/api-service.js';
 import { COLUMN_STATUSES } from './constants.js';
 import { DashboardDOM } from './dom/dashboard-dom.js';
 import { DashboardRender } from './dom/dashboard-render.js';
@@ -6,6 +7,7 @@ import { DashboardDeleteModal } from './modals/dashboard-delete-modal.js';
 import { DashboardModal } from './modals/dashboard-modal.js';
 import { setupKeyboard } from './interactions/dashboard-keyboard.js';
 import { setupProximitySnapping } from './interactions/dashboard-proximity.js';
+import { setupWebSocketIntegration, connectWebSocket, disconnectWebSocket } from './interactions/webSocketIntegration.js';
 
 const COMPONENTS = [
     'pages/dashboard/dashboard.html',
@@ -209,15 +211,88 @@ class KanbanDashboard {
 
     saveTask(taskData, taskId) {
         let selectedId = null;
-        if (taskId) {
-            StorageService.updateTask(taskId, taskData);
-            selectedId = taskId;
-        } else {
-            const newTask = StorageService.addTask(taskData);
-            if (newTask) selectedId = newTask.id;
+        const userId = localStorage.getItem('userId') || 'demo-user-123';
+
+        try {
+            if (taskId) {
+                // Update existing task via API
+                APIService.updateTask(taskId, {
+                    title: taskData.title,
+                    description: taskData.description,
+                    status: taskData.status
+                }).then(updatedTask => {
+                    // Convert server response to client format and save to localStorage
+                    const clientTask = {
+                        id: updatedTask.id,
+                        title: updatedTask.title,
+                        description: updatedTask.description || '',
+                        status: updatedTask.status,
+                        order: updatedTask.position || 0,
+                        createdAt: updatedTask.created_at,
+                        deadline: ''
+                    };
+                    StorageService.updateTask(taskId, clientTask);
+                    this.renderTasks();
+                    selectedId = taskId;
+                    if (selectedId) this.keyboard?.selectTaskId(selectedId);
+                }).catch(err => {
+                    console.error('Failed to update task via API, saving to localStorage only:', err);
+                    // Fallback to localStorage if API fails
+                    StorageService.updateTask(taskId, taskData);
+                    this.renderTasks();
+                    selectedId = taskId;
+                    if (selectedId) this.keyboard?.selectTaskId(selectedId);
+                });
+            } else {
+                // Create new task via API
+                APIService.createTask({
+                    userId,
+                    title: taskData.title,
+                    description: taskData.description,
+                    status: taskData.status || 'todo',
+                    position: 0
+                }).then(newTaskFromAPI => {
+                    // Convert server response to client format
+                    const clientTask = {
+                        id: newTaskFromAPI.id,
+                        title: newTaskFromAPI.title,
+                        description: newTaskFromAPI.description || '',
+                        status: newTaskFromAPI.status,
+                        order: newTaskFromAPI.position || 0,
+                        createdAt: newTaskFromAPI.created_at,
+                        deadline: ''
+                    };
+                    // Save to localStorage
+                    const tasks = StorageService.getTasks();
+                    if (!tasks.find(t => t.id === clientTask.id)) {
+                        tasks.push(clientTask);
+                        StorageService.saveTasks(tasks);
+                    }
+                    this.renderTasks();
+                    selectedId = newTaskFromAPI.id;
+                    if (selectedId) this.keyboard?.selectTaskId(selectedId);
+                }).catch(err => {
+                    console.error('Failed to create task via API, saving to localStorage only:', err);
+                    // Fallback to localStorage if API fails
+                    const newTask = StorageService.addTask(taskData);
+                    if (newTask) selectedId = newTask.id;
+                    this.renderTasks();
+                    if (selectedId) this.keyboard?.selectTaskId(selectedId);
+                });
+            }
+        } catch (error) {
+            console.error('Error in saveTask:', error);
+            // Fallback to localStorage
+            if (taskId) {
+                StorageService.updateTask(taskId, taskData);
+                selectedId = taskId;
+            } else {
+                const newTask = StorageService.addTask(taskData);
+                if (newTask) selectedId = newTask.id;
+            }
+            this.renderTasks();
+            if (selectedId) this.keyboard?.selectTaskId(selectedId);
         }
-        this.renderTasks();
-        if (selectedId) this.keyboard?.selectTaskId(selectedId);
     }
 
     renderTasks() {
@@ -236,9 +311,35 @@ class KanbanDashboard {
     handleDropCard(newStatus, taskId, insertIndex) {
         const task = StorageService.getTask(taskId);
         if (task) {
-            StorageService.moveTask(taskId, newStatus, insertIndex);
-            this.renderTasks();
-            this.keyboard?.selectTaskId(taskId);
+            // Calculate new position for the task
+            const tasksInNewStatus = StorageService.getTasksByStatus(newStatus);
+            const position = insertIndex !== undefined && insertIndex >= 0 && insertIndex <= tasksInNewStatus.length
+                ? insertIndex
+                : tasksInNewStatus.length;
+
+            // Update via API
+            APIService.updateTask(taskId, {
+                status: newStatus,
+                position: position
+            })
+                .then(updatedTask => {
+                    // Convert and save to localStorage
+                    const clientTask = {
+                        ...task,
+                        status: newStatus,
+                        order: position
+                    };
+                    StorageService.moveTask(taskId, newStatus, insertIndex);
+                    this.renderTasks();
+                    this.keyboard?.selectTaskId(taskId);
+                })
+                .catch(err => {
+                    console.error('Failed to move task via API, falling back to localStorage:', err);
+                    // Fallback to localStorage if API fails
+                    StorageService.moveTask(taskId, newStatus, insertIndex);
+                    this.renderTasks();
+                    this.keyboard?.selectTaskId(taskId);
+                });
         }
     }
 
@@ -274,8 +375,18 @@ class KanbanDashboard {
 
         this.deleteModal.init({
             onConfirmDelete: (taskId) => {
-                StorageService.deleteTask(taskId);
-                this.renderTasks();
+                // Delete via API (which will broadcast via WebSocket)
+                APIService.deleteTask(taskId)
+                    .then(() => {
+                        StorageService.deleteTask(taskId);
+                        this.renderTasks();
+                    })
+                    .catch(err => {
+                        console.error('Failed to delete task via API, falling back to localStorage:', err);
+                        // Fallback to localStorage if API fails
+                        StorageService.deleteTask(taskId);
+                        this.renderTasks();
+                    });
             },
         });
 
@@ -290,6 +401,50 @@ class KanbanDashboard {
             onMoveTask: (taskId, newStatus, insertIndex) => this.handleDropCard(newStatus, taskId, insertIndex),
             isModalOpen: () => document.querySelector('.modal-overlay.is-open') != null,
         });
+
+        // Initialize user and WebSocket - use shared demo user so both browsers sync
+        const DEMO_EMAIL = 'demo@kanban.local';
+        const DEMO_USER_NAME = 'Demo User';
+        let userId = null;
+
+        // Try to get existing demo user by email or create one
+        try {
+            try {
+                // Try to get existing user by email
+                const existingUser = await fetch(`http://localhost:3002/api/users/email/${encodeURIComponent(DEMO_EMAIL)}`)
+                    .then(r => {
+                        if (!r.ok) throw new Error('User not found');
+                        return r.json();
+                    });
+                userId = existingUser.id;
+                console.log('✓ Using existing demo user:', userId);
+            } catch (err) {
+                // User doesn't exist, create it
+                const newUser = await APIService.createUser({
+                    email: DEMO_EMAIL,
+                    name: DEMO_USER_NAME
+                });
+                userId = newUser.id;
+                console.log('✓ Created demo user:', userId);
+            }
+            localStorage.setItem('userId', userId);
+        } catch (error) {
+            console.error('Failed to initialize user:', error);
+            // Fallback - generate a temporary ID (won't sync across browsers but won't crash)
+            userId = `demo-${Math.random().toString(36).substr(2, 9)}`;
+            localStorage.setItem('userId', userId);
+        }
+
+        // Setup WebSocket listeners
+        this.wsCleanup = setupWebSocketIntegration({
+            userId,
+            onTaskCreated: (task) => this.renderTasks(),
+            onTaskUpdated: (task) => this.renderTasks(),
+            onTaskDeleted: (taskId) => this.renderTasks(),
+        });
+
+        // Connect to WebSocket
+        connectWebSocket(userId);
 
         this.renderTasks();
     }
