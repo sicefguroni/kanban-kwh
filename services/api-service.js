@@ -3,7 +3,7 @@
  * This service handles all communication with the Node.js/Express API
  */
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'http://localhost:3002/api';
 
 class APIService {
   constructor() {

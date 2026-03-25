@@ -4,15 +4,24 @@ import dotenv from 'dotenv';
 import session from 'express-session';
 import passport from 'passport';
 import initializeGoogleStrategy from './middleware/google-oauth.js';
+import { createServer } from 'http';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import initializeDatabase from './db/init.js';
 import pool from './db/connection.js';
 import usersRouter from './routes/users.js';
 import tasksRouter from './routes/tasks.js';
+import { initializeWebSocket } from './websocket/handler.js';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const envPath = join(__dirname, '../.env');
+
+dotenv.config({ path: envPath });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const server = createServer(app);
 
 // Initialize Passport with Google OAuth strategy
 initializeGoogleStrategy(passport);
@@ -39,10 +48,21 @@ app.use(session({
 // Passport initialization
 app.use(passport.initialize());
 app.use(passport.session());
+// OPTIONS preflight handler for CORS
+app.options('*', cors());
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+// API info endpoint
+app.get('/api', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    message: 'KWH Kanban API',
+    version: '1.0.0'
+  });
 });
 
 // Routes
@@ -82,16 +102,27 @@ app.use((req, res) => {
 // Start server
 async function start() {
   try {
-    // Test database connection
-    const client = await pool.connect();
-    console.log('✓ Connected to PostgreSQL');
-    client.release();
+    // Initialize WebSocket server
+    initializeWebSocket(server);
+    
+    // Try to connect to database (non-blocking)
+    let dbConnected = false;
+    try {
+      const client = await Promise.race([
+        pool.connect(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+      ]);
+      console.log('✓ Connected to PostgreSQL');
+      client.release();
+      dbConnected = true;
+      await initializeDatabase();
+    } catch (dbError) {
+      console.warn('⚠ Could not connect to database:', dbError.message);
+    }
 
-    // Initialize database schema
-    await initializeDatabase();
-
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`✓ Server running on http://localhost:${PORT}`);
+      console.log(`✓ WebSocket available at ws://localhost:${PORT}`);
       console.log(`✓ API Base URL: http://localhost:${PORT}/api`);
       console.log('\n📋 Authentication Methods:');
       console.log('  ✓ Email/Password login');
@@ -115,9 +146,15 @@ async function start() {
       console.log('  POST   /api/tasks - Create task (requires auth)');
       console.log('  PUT    /api/tasks/:id - Update task (requires auth)');
       console.log('  DELETE /api/tasks/:id - Delete task (requires auth)');
+      console.log('');
+      if (dbConnected) {
+        console.log('✓ Database connected');
+      } else {
+        console.log('⚠ Database not available - restart after PostgreSQL is running');
+      }
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('Failed to start server:', error.message);
     process.exit(1);
   }
 }
