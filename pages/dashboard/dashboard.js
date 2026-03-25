@@ -28,6 +28,9 @@ class KanbanDashboard {
         this.renderer = null;
         this.$addTaskBtn = null;
         this.keyboard = null;
+        // Serialize operations that mutate tasks + re-render.
+        // This prevents race conditions when multiple UI events happen quickly.
+        this._opChain = Promise.resolve();
     }
 
     async loadComponents() {
@@ -193,8 +196,8 @@ class KanbanDashboard {
     attachColumnListeners(columnInstance, status) {
         columnInstance.setAddTaskListener(() => this.openModalForCreate(status));
         columnInstance.setDropZoneListeners(
-            () => {},
-            () => {},
+            () => { },
+            () => { },
             (newStatus, taskId, insertIndex) => this.handleDropCard(newStatus, taskId, insertIndex)
         );
     }
@@ -208,25 +211,49 @@ class KanbanDashboard {
     }
 
     saveTask(taskData, taskId) {
-        let selectedId = null;
-        if (taskId) {
-            StorageService.updateTask(taskId, taskData);
-            selectedId = taskId;
-        } else {
-            const newTask = StorageService.addTask(taskData);
-            if (newTask) selectedId = newTask.id;
-        }
-        this.renderTasks();
-        if (selectedId) this.keyboard?.selectTaskId(selectedId);
+        this._opChain = this._opChain.then(async () => {
+            let selectedId = null;
+            if (taskId) {
+                const current = await StorageService.getTask(taskId);
+                const desiredStatus = taskData.status || 'To Do';
+
+                // Server keeps "move" operations separate to control reordering.
+                if (current && current.status !== desiredStatus) {
+                    await StorageService.moveTask(taskId, desiredStatus);
+                }
+
+                await StorageService.updateTask(taskId, {
+                    title: taskData.title,
+                    description: taskData.description,
+                    deadline: taskData.deadline,
+                });
+                selectedId = taskId;
+            } else {
+                const created = await StorageService.addTask({
+                    title: taskData.title,
+                    description: taskData.description,
+                    status: taskData.status || 'To Do',
+                    deadline: taskData.deadline,
+                });
+                selectedId = created?.id ?? null;
+            }
+
+            await this.renderTasks();
+            if (selectedId) this.keyboard?.selectTaskId(selectedId);
+        }).catch((err) => {
+            // eslint-disable-next-line no-console
+            console.error(err);
+        });
+        return this._opChain;
     }
 
-    renderTasks() {
+    async renderTasks() {
         if (!this.renderer) this.renderer = new DashboardRender(this.columnInstances);
-        this.renderer.renderTasks(
+        this.renderer._afterRender = () => this.keyboard?.syncFocus();
+        await this.renderer.renderTasks(
             (taskData) => this.openModalForEdit(taskData),
             (taskId) => this.handleDeleteTask(taskId)
         );
-        this.keyboard?.syncFocus();
     }
 
     handleDeleteTask(taskId) {
@@ -234,18 +261,20 @@ class KanbanDashboard {
     }
 
     handleDropCard(newStatus, taskId, insertIndex) {
-        const task = StorageService.getTask(taskId);
-        if (task) {
-            StorageService.moveTask(taskId, newStatus, insertIndex);
-            this.renderTasks();
+        this._opChain = this._opChain.then(async () => {
+            await StorageService.moveTask(taskId, newStatus, insertIndex);
+            await this.renderTasks();
             this.keyboard?.selectTaskId(taskId);
-        }
+        }).catch((err) => {
+            // eslint-disable-next-line no-console
+            console.error(err);
+        });
     }
 
     handleProximityDrop(columnInstance, taskId) {
         if (!columnInstance?.onDropCallback || !taskId) return;
-        const task = StorageService.getTask(taskId);
-        if (task) columnInstance.onDropCallback(columnInstance.title, taskId, undefined);
+        // Just trigger the same move logic as a normal drop.
+        columnInstance.onDropCallback(columnInstance.title, taskId, undefined);
     }
 
     clearAllSnapEffects() {
@@ -274,16 +303,26 @@ class KanbanDashboard {
 
         this.deleteModal.init({
             onConfirmDelete: (taskId) => {
-                StorageService.deleteTask(taskId);
-                this.renderTasks();
+                this._opChain = this._opChain.then(async () => {
+                    await StorageService.deleteTask(taskId);
+                    await this.renderTasks();
+                }).catch((err) => {
+                    // eslint-disable-next-line no-console
+                    console.error(err);
+                });
             },
         });
 
         this.keyboard = setupKeyboard({
             columnInstances: this.columnInstances,
             onEditTask: (taskId) => {
-                const task = StorageService.getTask(taskId);
-                if (task) this.openModalForEdit(task);
+                this._opChain = this._opChain.then(async () => {
+                    const task = await StorageService.getTask(taskId);
+                    if (task) this.openModalForEdit(task);
+                }).catch((err) => {
+                    // eslint-disable-next-line no-console
+                    console.error(err);
+                });
             },
             onDeleteTask: (taskId) => this.handleDeleteTask(taskId),
             onCreateTask: (status) => this.openModalForCreate(status),
@@ -291,7 +330,7 @@ class KanbanDashboard {
             isModalOpen: () => document.querySelector('.modal-overlay.is-open') != null,
         });
 
-        this.renderTasks();
+        await this.renderTasks();
     }
 }
 
