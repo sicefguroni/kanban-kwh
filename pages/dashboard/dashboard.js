@@ -1,4 +1,5 @@
 import { StorageService } from '../../services/storage-service.js';
+import APIService from '../../services/api-service.js';
 import { COLUMN_STATUSES } from './constants.js';
 import { DashboardDOM } from './dom/dashboard-dom.js';
 import { DashboardRender } from './dom/dashboard-render.js';
@@ -6,6 +7,7 @@ import { DashboardDeleteModal } from './modals/dashboard-delete-modal.js';
 import { DashboardModal } from './modals/dashboard-modal.js';
 import { setupKeyboard } from './interactions/dashboard-keyboard.js';
 import { setupProximitySnapping } from './interactions/dashboard-proximity.js';
+import { setupWebSocketIntegration, connectWebSocket, disconnectWebSocket } from './interactions/webSocketIntegration.js';
 
 const COMPONENTS = [
     'pages/dashboard/dashboard.html',
@@ -211,40 +213,16 @@ class KanbanDashboard {
     }
 
     saveTask(taskData, taskId) {
-        this._opChain = this._opChain.then(async () => {
-            let selectedId = null;
-            if (taskId) {
-                const current = await StorageService.getTask(taskId);
-                const desiredStatus = taskData.status || 'To Do';
-
-                // Server keeps "move" operations separate to control reordering.
-                if (current && current.status !== desiredStatus) {
-                    await StorageService.moveTask(taskId, desiredStatus);
-                }
-
-                await StorageService.updateTask(taskId, {
-                    title: taskData.title,
-                    description: taskData.description,
-                    deadline: taskData.deadline,
-                });
-                selectedId = taskId;
-            } else {
-                const created = await StorageService.addTask({
-                    title: taskData.title,
-                    description: taskData.description,
-                    status: taskData.status || 'To Do',
-                    deadline: taskData.deadline,
-                });
-                selectedId = created?.id ?? null;
-            }
-
-            await this.renderTasks();
-            if (selectedId) this.keyboard?.selectTaskId(selectedId);
-        }).catch((err) => {
-            // eslint-disable-next-line no-console
-            console.error(err);
-        });
-        return this._opChain;
+        let selectedId = null;
+        if (taskId) {
+            StorageService.updateTask(taskId, taskData);
+            selectedId = taskId;
+        } else {
+            const newTask = StorageService.addTask(taskData);
+            if (newTask) selectedId = newTask.id;
+        }
+        this.renderTasks();
+        if (selectedId) this.keyboard?.selectTaskId(selectedId);
     }
 
     async renderTasks() {
@@ -261,14 +239,12 @@ class KanbanDashboard {
     }
 
     handleDropCard(newStatus, taskId, insertIndex) {
-        this._opChain = this._opChain.then(async () => {
-            await StorageService.moveTask(taskId, newStatus, insertIndex);
-            await this.renderTasks();
+        const task = StorageService.getTask(taskId);
+        if (task) {
+            StorageService.moveTask(taskId, newStatus, insertIndex);
+            this.renderTasks();
             this.keyboard?.selectTaskId(taskId);
-        }).catch((err) => {
-            // eslint-disable-next-line no-console
-            console.error(err);
-        });
+        }
     }
 
     handleProximityDrop(columnInstance, taskId) {
@@ -303,13 +279,8 @@ class KanbanDashboard {
 
         this.deleteModal.init({
             onConfirmDelete: (taskId) => {
-                this._opChain = this._opChain.then(async () => {
-                    await StorageService.deleteTask(taskId);
-                    await this.renderTasks();
-                }).catch((err) => {
-                    // eslint-disable-next-line no-console
-                    console.error(err);
-                });
+                StorageService.deleteTask(taskId);
+                this.renderTasks();
             },
         });
 
@@ -329,6 +300,50 @@ class KanbanDashboard {
             onMoveTask: (taskId, newStatus, insertIndex) => this.handleDropCard(newStatus, taskId, insertIndex),
             isModalOpen: () => document.querySelector('.modal-overlay.is-open') != null,
         });
+
+        // Initialize user and WebSocket - use shared demo user so both browsers sync
+        const DEMO_EMAIL = 'demo@kanban.local';
+        const DEMO_USER_NAME = 'Demo User';
+        let userId = null;
+
+        // Try to get existing demo user by email or create one
+        try {
+            try {
+                // Try to get existing user by email
+                const existingUser = await fetch(`http://localhost:3002/api/users/email/${encodeURIComponent(DEMO_EMAIL)}`)
+                    .then(r => {
+                        if (!r.ok) throw new Error('User not found');
+                        return r.json();
+                    });
+                userId = existingUser.id;
+                console.log('✓ Using existing demo user:', userId);
+            } catch (err) {
+                // User doesn't exist, create it
+                const newUser = await APIService.createUser({
+                    email: DEMO_EMAIL,
+                    name: DEMO_USER_NAME
+                });
+                userId = newUser.id;
+                console.log('✓ Created demo user:', userId);
+            }
+            localStorage.setItem('userId', userId);
+        } catch (error) {
+            console.error('Failed to initialize user:', error);
+            // Fallback - generate a temporary ID (won't sync across browsers but won't crash)
+            userId = `demo-${Math.random().toString(36).substr(2, 9)}`;
+            localStorage.setItem('userId', userId);
+        }
+
+        // Setup WebSocket listeners
+        this.wsCleanup = setupWebSocketIntegration({
+            userId,
+            onTaskCreated: (task) => this.renderTasks(),
+            onTaskUpdated: (task) => this.renderTasks(),
+            onTaskDeleted: (taskId) => this.renderTasks(),
+        });
+
+        // Connect to WebSocket
+        connectWebSocket(userId);
 
         await this.renderTasks();
     }

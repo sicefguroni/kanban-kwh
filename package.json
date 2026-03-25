@@ -1,29 +1,28 @@
 {
-  "name": "kanban-kwh",
+  "name": "kwh-kanban",
   "version": "1.0.0",
-  "description": "A task management Kanban board with drag-and-drop, keyboard navigation, and mobile-friendly drop zones.",
-  "main": "index.js",
+  "description": "Full-stack Kanban board application",
+  "private": true,
   "scripts": {
-    "dev": "nodemon server/index.js",
-    "start": "node server/index.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/sicefguroni/kanban-kwh.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/sicefguroni/kanban-kwh/issues"
-  },
-  "homepage": "https://github.com/sicefguroni/kanban-kwh#readme",
-  "dependencies": {
-    "cors": "^2.8.6",
-    "express": "^5.2.1"
+    "dev": "npm run dev:backend & npm run dev:frontend",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "http-server -p 5173 -c-1",
+    "start": "npm run start:backend & npm run start:frontend",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "http-server -p 5173",
+    "install:all": "npm install && cd backend && npm install && cd ..",
+    "build": "echo 'Frontend is static HTML/CSS/JS - no build needed'",
+    "db:init": "cd backend && npm run db:init",
+    "db:reset": "cd backend && npm run db:reset"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
-  }
+    "http-server": "^14.1.1"
+  },
+  "keywords": [
+    "kanban",
+    "board",
+    "task-management"
+  ],
+  "author": "",
+  "license": "MIT"
 }
