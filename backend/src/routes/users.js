@@ -1,10 +1,40 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import bcrypt from 'bcryptjs';
-import pool from '../db/connection.js';
-import AuthService, { authMiddleware } from '../middleware/auth.js';
+import pool, { isDbReady, trySetDbReady } from '../db/connection.js';
 
 const router = express.Router();
+
+router.use(async (req, res, next) => {
+  if (!isDbReady()) {
+    const ok = await trySetDbReady({ timeoutMs: 800 });
+    if (!ok) {
+      return res.status(503).json({
+        error: 'Database unavailable',
+        message: 'PostgreSQL is not reachable yet. Try again in a few seconds.'
+      });
+    }
+  }
+  next();
+});
+
+function isDbConnError(error) {
+  const message = String(error?.message || '');
+  return error?.code === 'ECONNREFUSED' || message.includes('ECONNREFUSED');
+}
+
+// Get all users
+router.get('/', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, email, name, created_at, updated_at FROM users ORDER BY created_at DESC');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(isDbConnError(error) ? 503 : 500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+import bcrypt from 'bcryptjs';
+import AuthService, { authMiddleware } from '../middleware/auth.js';
 
 // ===== PUBLIC ROUTES =====
 
@@ -21,7 +51,7 @@ router.get('/email/:email', async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error fetching user:', error);
-    res.status(500).json({ error: 'Failed to fetch user' });
+    res.status(isDbConnError(error) ? 503 : 500).json({ error: 'Failed to fetch user' });
   }
 });
 
@@ -35,7 +65,7 @@ router.get('/:id', async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error fetching user:', error);
-    res.status(500).json({ error: 'Failed to fetch user' });
+    res.status(isDbConnError(error) ? 503 : 500).json({ error: 'Failed to fetch user' });
   }
 });
 
@@ -71,8 +101,8 @@ router.get('/:id', async (req, res) => {
     if (error.code === '23505') {
       return res.status(409).json({ error: 'Email already exists' });
     }
-    console.error('Error registering user:', error);
-    res.status(500).json({ error: 'Failed to register user' });
+    console.error('Error creating user:', error);
+    res.status(isDbConnError(error) ? 503 : 500).json({ error: 'Failed to create user' });
   }
 });
 
@@ -112,8 +142,13 @@ router.post('/login', async (req, res) => {
       token
     });
   } catch (error) {
+<<<<<<< feature/rest-api-testing
+    console.error('Error updating user:', error);
+    res.status(isDbConnError(error) ? 503 : 500).json({ error: 'Failed to update user' });
+=======
     console.error('Error logging in:', error);
     res.status(500).json({ error: 'Failed to log in' });
+>>>>>>> dev
   }
 });
 
@@ -131,8 +166,13 @@ router.get('/me', authMiddleware, async (req, res) => {
     }
     res.json(result.rows[0]);
   } catch (error) {
+<<<<<<< feature/rest-api-testing
+    console.error('Error deleting user:', error);
+    res.status(isDbConnError(error) ? 503 : 500).json({ error: 'Failed to delete user' });
+=======
     console.error('Error fetching user:', error);
     res.status(500).json({ error: 'Failed to fetch user' });
+>>>>>>> dev
   }
 });
 

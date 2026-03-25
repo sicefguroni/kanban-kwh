@@ -1,85 +1,81 @@
-const STORAGE_KEY = 'kanban_tasks';
+// REST-backed storage service (replaces the old localStorage version).
+//
+// Configure the API base URL by setting:
+//   window.KANBAN_API_BASE_URL = "http://127.0.0.1:3001" (or your backend URL)
+//
+// If unset, defaults to http://127.0.0.1:3001.
+const DEFAULT_API_BASE_URL = 'http://127.0.0.1:3001';
+
+function getApiBaseUrl() {
+    if (typeof window !== 'undefined' && window.KANBAN_API_BASE_URL) {
+        return String(window.KANBAN_API_BASE_URL);
+    }
+    return DEFAULT_API_BASE_URL;
+}
+
+async function apiRequest(method, path, body) {
+    const baseUrl = getApiBaseUrl().replace(/\/$/, '');
+    const url = `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+
+    const headers = { 'Content-Type': 'application/json' };
+    const res = await fetch(url, {
+        method,
+        headers,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+
+    const contentType = res.headers.get('content-type') || '';
+    const isJson = contentType.includes('application/json');
+    const payload = isJson ? await res.json().catch(() => null) : await res.text().catch(() => null);
+
+    if (!res.ok) {
+        const message =
+            payload?.message ||
+            payload?.error ||
+            (typeof payload === 'string' && payload.length ? payload : null) ||
+            res.statusText ||
+            'Request failed';
+        throw new Error(message);
+    }
+
+    return payload;
+}
 
 export const StorageService = {
-    getTasks() {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        return stored ? JSON.parse(stored) : [];
+    async getTasksByStatus(status) {
+        return apiRequest('GET', `/tasks?status=${encodeURIComponent(status)}`);
     },
 
-    saveTasks(tasks) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    async getTask(id) {
+        return apiRequest('GET', `/tasks/${encodeURIComponent(id)}`);
     },
 
-    addTask(task) {
-        const tasks = this.getTasks();
-        const sameStatus = tasks.filter(t => t.status === task.status);
-        const maxOrder = sameStatus.length === 0
-            ? -1
-            : Math.max(...sameStatus.map(t => (t.order ?? 0)));
-        const newTask = {
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+    async addTask(task) {
+        const payload = {
             title: task.title,
             description: task.description || '',
             status: task.status,
             deadline: task.deadline || '',
-            createdAt: new Date().toISOString(),
-            order: maxOrder + 1,
         };
-        tasks.push(newTask);
-        this.saveTasks(tasks);
-        return newTask;
+        return apiRequest('POST', '/tasks', payload);
     },
 
-    updateTask(id, updates) {
-        let tasks = this.getTasks();
-        tasks = tasks.map(task => (task.id === id ? { ...task, ...updates } : task));
-        this.saveTasks(tasks);
+    async updateTask(id, updates) {
+        const payload = {
+            title: updates.title,
+            description: updates.description || '',
+            deadline: updates.deadline || '',
+        };
+        return apiRequest('PATCH', `/tasks/${encodeURIComponent(id)}`, payload);
     },
 
-    deleteTask(id) {
-        let tasks = this.getTasks();
-        tasks = tasks.filter(task => task.id !== id);
-        this.saveTasks(tasks);
+    async deleteTask(id) {
+        return apiRequest('DELETE', `/tasks/${encodeURIComponent(id)}`);
     },
 
-    getTasksByStatus(status) {
-        const tasks = this.getTasks().filter(task => task.status === status);
-        const sorted = tasks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-        const needsOrder = sorted.some(t => t.order == null);
-        if (needsOrder) {
-            sorted.forEach((t, i) => {
-                if (t.order == null) t.order = i;
-            });
-            this.saveTasks(this.getTasks());
-        }
-        return sorted;
-    },
-
-    moveTask(taskId, newStatus, insertIndex = undefined) {
-        const tasks = this.getTasks();
-        const task = tasks.find(t => t.id === taskId);
-        if (!task) return;
-
-        const sameStatusBefore = task.status === newStatus;
-        const list = tasks
-            .filter(t => t.status === newStatus && t.id !== taskId)
-            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-
-        const index = insertIndex !== undefined && insertIndex >= 0 && insertIndex <= list.length
-            ? insertIndex
-            : list.length;
-        list.splice(index, 0, { ...task, status: newStatus });
-        list.forEach((t, i) => {
-            const existing = tasks.find(x => x.id === t.id);
-            if (existing) {
-                existing.status = newStatus;
-                existing.order = i;
-            }
-        });
-        this.saveTasks(tasks);
-    },
-
-    getTask(id) {
-        return this.getTasks().find(task => task.id === id);
+    async moveTask(taskId, newStatus, insertIndex = undefined) {
+        const payload = { newStatus };
+        if (insertIndex !== undefined) payload.insertIndex = insertIndex;
+        return apiRequest('POST', `/tasks/${encodeURIComponent(taskId)}/move`, payload);
     },
 };

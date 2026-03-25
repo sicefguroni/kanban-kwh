@@ -1,11 +1,27 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import pool from '../db/connection.js';
-import { authMiddleware } from '../middleware/auth.js';
+import pool, { isDbReady, trySetDbReady } from '../db/connection.js';
 import { broadcastTaskEvent } from '../websocket/handler.js';
 
 const router = express.Router();
 
+router.use(async (req, res, next) => {
+  if (!isDbReady()) {
+    const ok = await trySetDbReady({ timeoutMs: 800 });
+    if (!ok) {
+      return res.status(503).json({
+        error: 'Database unavailable',
+        message: 'PostgreSQL is not reachable yet. Try again in a few seconds.'
+      });
+    }
+  }
+  next();
+});
+
+function isDbConnError(error) {
+  const message = String(error?.message || '');
+  return error?.code === 'ECONNREFUSED' || message.includes('ECONNREFUSED');
+}
 // All task routes require JWT authentication
 router.use(authMiddleware);
 
@@ -21,7 +37,7 @@ router.get('/user/:userId', async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching tasks:', error);
-    res.status(500).json({ error: 'Failed to fetch tasks' });
+    res.status(isDbConnError(error) ? 503 : 500).json({ error: 'Failed to fetch tasks' });
   }
 });
 
@@ -35,7 +51,7 @@ router.get('/status/:status', async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching tasks:', error);
-    res.status(500).json({ error: 'Failed to fetch tasks' });
+    res.status(isDbConnError(error) ? 503 : 500).json({ error: 'Failed to fetch tasks' });
   }
 });
 
@@ -52,7 +68,7 @@ router.get('/:id', async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error fetching task:', error);
-    res.status(500).json({ error: 'Failed to fetch task' });
+    res.status(isDbConnError(error) ? 503 : 500).json({ error: 'Failed to fetch task' });
   }
 });
 
@@ -87,7 +103,7 @@ router.post('/', async (req, res) => {
     res.status(201).json(task);
   } catch (error) {
     console.error('Error creating task:', error);
-    res.status(500).json({ error: 'Failed to create task' });
+    res.status(isDbConnError(error) ? 503 : 500).json({ error: 'Failed to create task' });
   }
 });
 
@@ -132,13 +148,16 @@ router.put('/:id', async (req, res) => {
 
     updates.push(`updated_at = $${paramCount++}`);
     params.push(now);
+    // `paramCount` now points at the next SQL placeholder index, which will
+    // be used for the `id` in the WHERE clause below.
+    const idParamIndex = paramCount;
     params.push(req.params.id);
 
     if (updates.length === 1) {
       return res.status(400).json({ error: 'No fields to update' });
     }
 
-    const query = `UPDATE tasks SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, user_id, title, description, status, position, created_at, updated_at`;
+    const query = `UPDATE tasks SET ${updates.join(', ')} WHERE id = $${idParamIndex} RETURNING id, user_id, title, description, status, position, created_at, updated_at`;
     const result = await pool.query(query, params);
 
     const task = result.rows[0];
@@ -149,7 +168,7 @@ router.put('/:id', async (req, res) => {
     res.json(task);
   } catch (error) {
     console.error('Error updating task:', error);
-    res.status(500).json({ error: 'Failed to update task' });
+    res.status(isDbConnError(error) ? 503 : 500).json({ error: 'Failed to update task' });
   }
 });
 
@@ -177,7 +196,7 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Task deleted successfully' });
   } catch (error) {
     console.error('Error deleting task:', error);
-    res.status(500).json({ error: 'Failed to delete task' });
+    res.status(isDbConnError(error) ? 503 : 500).json({ error: 'Failed to delete task' });
   }
 });
 

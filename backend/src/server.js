@@ -12,6 +12,7 @@ import pool from './db/connection.js';
 import usersRouter from './routes/users.js';
 import tasksRouter from './routes/tasks.js';
 import { initializeWebSocket } from './websocket/handler.js';
+import { setDbReady } from './db/connection.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -115,9 +116,11 @@ async function start() {
       console.log('✓ Connected to PostgreSQL');
       client.release();
       dbConnected = true;
+      setDbReady(true);
       await initializeDatabase();
     } catch (dbError) {
       console.warn('⚠ Could not connect to database:', dbError.message);
+      setDbReady(false);
     }
 
     server.listen(PORT, () => {

@@ -37,6 +37,9 @@ class KanbanDashboard {
         this.renderer = null;
         this.$addTaskBtn = null;
         this.keyboard = null;
+        // Serialize operations that mutate tasks + re-render.
+        // This prevents race conditions when multiple UI events happen quickly.
+        this._opChain = Promise.resolve();
     }
 
     async loadComponents() {
@@ -228,8 +231,8 @@ class KanbanDashboard {
     attachColumnListeners(columnInstance, status) {
         columnInstance.setAddTaskListener(() => this.openModalForCreate(status));
         columnInstance.setDropZoneListeners(
-            () => {},
-            () => {},
+            () => { },
+            () => { },
             (newStatus, taskId, insertIndex) => this.handleDropCard(newStatus, taskId, insertIndex)
         );
     }
@@ -244,97 +247,24 @@ class KanbanDashboard {
 
     saveTask(taskData, taskId) {
         let selectedId = null;
-        const userId = localStorage.getItem('userId') || 'demo-user-123';
-
-        try {
-            if (taskId) {
-                // Update existing task via API
-                APIService.updateTask(taskId, {
-                    title: taskData.title,
-                    description: taskData.description,
-                    status: taskData.status
-                }).then(updatedTask => {
-                    // Convert server response to client format and save to localStorage
-                    const clientTask = {
-                        id: updatedTask.id,
-                        title: updatedTask.title,
-                        description: updatedTask.description || '',
-                        status: updatedTask.status,
-                        order: updatedTask.position || 0,
-                        createdAt: updatedTask.created_at,
-                        deadline: ''
-                    };
-                    StorageService.updateTask(taskId, clientTask);
-                    this.renderTasks();
-                    selectedId = taskId;
-                    if (selectedId) this.keyboard?.selectTaskId(selectedId);
-                }).catch(err => {
-                    console.error('Failed to update task via API, saving to localStorage only:', err);
-                    // Fallback to localStorage if API fails
-                    StorageService.updateTask(taskId, taskData);
-                    this.renderTasks();
-                    selectedId = taskId;
-                    if (selectedId) this.keyboard?.selectTaskId(selectedId);
-                });
-            } else {
-                // Create new task via API
-                APIService.createTask({
-                    userId,
-                    title: taskData.title,
-                    description: taskData.description,
-                    status: taskData.status || 'todo',
-                    position: 0
-                }).then(newTaskFromAPI => {
-                    // Convert server response to client format
-                    const clientTask = {
-                        id: newTaskFromAPI.id,
-                        title: newTaskFromAPI.title,
-                        description: newTaskFromAPI.description || '',
-                        status: newTaskFromAPI.status,
-                        order: newTaskFromAPI.position || 0,
-                        createdAt: newTaskFromAPI.created_at,
-                        deadline: ''
-                    };
-                    // Save to localStorage
-                    const tasks = StorageService.getTasks();
-                    if (!tasks.find(t => t.id === clientTask.id)) {
-                        tasks.push(clientTask);
-                        StorageService.saveTasks(tasks);
-                    }
-                    this.renderTasks();
-                    selectedId = newTaskFromAPI.id;
-                    if (selectedId) this.keyboard?.selectTaskId(selectedId);
-                }).catch(err => {
-                    console.error('Failed to create task via API, saving to localStorage only:', err);
-                    // Fallback to localStorage if API fails
-                    const newTask = StorageService.addTask(taskData);
-                    if (newTask) selectedId = newTask.id;
-                    this.renderTasks();
-                    if (selectedId) this.keyboard?.selectTaskId(selectedId);
-                });
-            }
-        } catch (error) {
-            console.error('Error in saveTask:', error);
-            // Fallback to localStorage
-            if (taskId) {
-                StorageService.updateTask(taskId, taskData);
-                selectedId = taskId;
-            } else {
-                const newTask = StorageService.addTask(taskData);
-                if (newTask) selectedId = newTask.id;
-            }
-            this.renderTasks();
-            if (selectedId) this.keyboard?.selectTaskId(selectedId);
+        if (taskId) {
+            StorageService.updateTask(taskId, taskData);
+            selectedId = taskId;
+        } else {
+            const newTask = StorageService.addTask(taskData);
+            if (newTask) selectedId = newTask.id;
         }
+        this.renderTasks();
+        if (selectedId) this.keyboard?.selectTaskId(selectedId);
     }
 
-    renderTasks() {
+    async renderTasks() {
         if (!this.renderer) this.renderer = new DashboardRender(this.columnInstances);
-        this.renderer.renderTasks(
+        this.renderer._afterRender = () => this.keyboard?.syncFocus();
+        await this.renderer.renderTasks(
             (taskData) => this.openModalForEdit(taskData),
             (taskId) => this.handleDeleteTask(taskId)
         );
-        this.keyboard?.syncFocus();
     }
 
     handleDeleteTask(taskId) {
@@ -344,42 +274,16 @@ class KanbanDashboard {
     handleDropCard(newStatus, taskId, insertIndex) {
         const task = StorageService.getTask(taskId);
         if (task) {
-            // Calculate new position for the task
-            const tasksInNewStatus = StorageService.getTasksByStatus(newStatus);
-            const position = insertIndex !== undefined && insertIndex >= 0 && insertIndex <= tasksInNewStatus.length
-                ? insertIndex
-                : tasksInNewStatus.length;
-
-            // Update via API
-            APIService.updateTask(taskId, {
-                status: newStatus,
-                position: position
-            })
-                .then(updatedTask => {
-                    // Convert and save to localStorage
-                    const clientTask = {
-                        ...task,
-                        status: newStatus,
-                        order: position
-                    };
-                    StorageService.moveTask(taskId, newStatus, insertIndex);
-                    this.renderTasks();
-                    this.keyboard?.selectTaskId(taskId);
-                })
-                .catch(err => {
-                    console.error('Failed to move task via API, falling back to localStorage:', err);
-                    // Fallback to localStorage if API fails
-                    StorageService.moveTask(taskId, newStatus, insertIndex);
-                    this.renderTasks();
-                    this.keyboard?.selectTaskId(taskId);
-                });
+            StorageService.moveTask(taskId, newStatus, insertIndex);
+            this.renderTasks();
+            this.keyboard?.selectTaskId(taskId);
         }
     }
 
     handleProximityDrop(columnInstance, taskId) {
         if (!columnInstance?.onDropCallback || !taskId) return;
-        const task = StorageService.getTask(taskId);
-        if (task) columnInstance.onDropCallback(columnInstance.title, taskId, undefined);
+        // Just trigger the same move logic as a normal drop.
+        columnInstance.onDropCallback(columnInstance.title, taskId, undefined);
     }
 
     clearAllSnapEffects() {
@@ -409,26 +313,21 @@ class KanbanDashboard {
 
         this.deleteModal.init({
             onConfirmDelete: (taskId) => {
-                // Delete via API (which will broadcast via WebSocket)
-                APIService.deleteTask(taskId)
-                    .then(() => {
-                        StorageService.deleteTask(taskId);
-                        this.renderTasks();
-                    })
-                    .catch(err => {
-                        console.error('Failed to delete task via API, falling back to localStorage:', err);
-                        // Fallback to localStorage if API fails
-                        StorageService.deleteTask(taskId);
-                        this.renderTasks();
-                    });
+                StorageService.deleteTask(taskId);
+                this.renderTasks();
             },
         });
 
         this.keyboard = setupKeyboard({
             columnInstances: this.columnInstances,
             onEditTask: (taskId) => {
-                const task = StorageService.getTask(taskId);
-                if (task) this.openModalForEdit(task);
+                this._opChain = this._opChain.then(async () => {
+                    const task = await StorageService.getTask(taskId);
+                    if (task) this.openModalForEdit(task);
+                }).catch((err) => {
+                    // eslint-disable-next-line no-console
+                    console.error(err);
+                });
             },
             onDeleteTask: (taskId) => this.handleDeleteTask(taskId),
             onCreateTask: (status) => this.openModalForCreate(status),
@@ -480,7 +379,7 @@ class KanbanDashboard {
         // Connect to WebSocket
         connectWebSocket(userId);
 
-        this.renderTasks();
+        await this.renderTasks();
     }
 }
 

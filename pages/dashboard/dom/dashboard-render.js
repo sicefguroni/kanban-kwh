@@ -7,15 +7,19 @@ export class DashboardRender {
         this.columnInstances = columnInstances;
         this._onEdit = null;
         this._onDelete = null;
+        this._afterRender = null;
     }
 
-    renderTasks(onEdit, onDelete) {
+    async renderTasks(onEdit, onDelete) {
         this._onEdit = onEdit;
         this._onDelete = onDelete;
         this.clearAllColumns();
-        COLUMN_STATUSES.forEach(status => {
-            this.renderTasksForStatus(status, onEdit, onDelete);
-        });
+        for (const status of COLUMN_STATUSES) {
+            // Sequential rendering keeps DOM updates deterministic when the API is slow.
+            await this.renderTasksForStatus(status, onEdit, onDelete);
+        }
+        // Optional hook (used by the dashboard to re-apply keyboard focus).
+        this._afterRender?.();
     }
 
     clearAllColumns() {
@@ -25,8 +29,8 @@ export class DashboardRender {
         });
     }
 
-    renderTasksForStatus(status, onEdit, onDelete) {
-        const tasks = StorageService.getTasksByStatus(status);
+    async renderTasksForStatus(status, onEdit, onDelete) {
+        const tasks = await StorageService.getTasksByStatus(status);
         const $container = this.columnInstances[status]?.getCardsContainer();
         if (!$container) return;
 
@@ -51,29 +55,34 @@ export class DashboardRender {
         // Checkbox handling
         const $checkbox = $cardElement.querySelector('.kanban-card__checkbox');
         if ($checkbox) {
-            const task = StorageService.getTask(taskData.id);
-            $checkbox.checked = !!(task && task.status === 'Done');
+            $checkbox.checked = taskData.status === 'Done';
 
-            $checkbox.addEventListener('change', (e) => {
-                const current = StorageService.getTask(taskData.id);
-                if (!current) return;
+            $checkbox.addEventListener('change', async (e) => {
+                try {
+                    if (e.target.checked) {
+                        // advance status: To Do -> In Progress -> Done
+                        if (taskData.status === 'To Do') {
+                            await StorageService.moveTask(taskData.id, 'In Progress');
+                        } else if (taskData.status === 'In Progress') {
+                            await StorageService.moveTask(taskData.id, 'Done');
+                        } else {
+                            return;
+                        }
+                    } else {
+                        // unchecked from Done -> move back to To Do
+                        if (taskData.status === 'Done') {
+                            await StorageService.moveTask(taskData.id, 'To Do');
+                        } else {
+                            return;
+                        }
+                    }
 
-                if (e.target.checked) {
-                    // advance status: To Do -> In Progress -> Done
-                    if (current.status === 'To Do') {
-                        StorageService.moveTask(taskData.id, 'In Progress');
-                    } else if (current.status === 'In Progress') {
-                        StorageService.moveTask(taskData.id, 'Done');
-                    }
-                } else {
-                    // unchecked from Done -> move back to To Do
-                    if (current.status === 'Done') {
-                        StorageService.moveTask(taskData.id, 'To Do');
-                    }
+                    // re-render using stored callbacks
+                    await this.renderTasks(this._onEdit, this._onDelete);
+                } catch (err) {
+                    // eslint-disable-next-line no-alert
+                    alert(err?.message || 'Failed to update task');
                 }
-
-                // re-render using stored callbacks
-                this.renderTasks(this._onEdit, this._onDelete);
             });
         }
     }
