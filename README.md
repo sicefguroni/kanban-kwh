@@ -45,6 +45,8 @@ kanban-kwh/
 
 ## Quick Setup
 
+For remote access from another laptop using ngrok, see [NGROK_REMOTE_SETUP.md](NGROK_REMOTE_SETUP.md).
+
 ### 1. Clone repository
 
 ```bash
