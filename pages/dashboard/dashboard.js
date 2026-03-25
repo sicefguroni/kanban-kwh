@@ -1,4 +1,6 @@
 import { StorageService } from '../../services/storage-service.js';
+import authService from '../../services/auth-service.js';
+import apiService from '../../services/api-service.js';
 import APIService from '../../services/api-service.js';
 import { COLUMN_STATUSES } from './constants.js';
 import { DashboardDOM } from './dom/dashboard-dom.js';
@@ -8,6 +10,11 @@ import { DashboardModal } from './modals/dashboard-modal.js';
 import { setupKeyboard } from './interactions/dashboard-keyboard.js';
 import { setupProximitySnapping } from './interactions/dashboard-proximity.js';
 import { setupWebSocketIntegration, connectWebSocket, disconnectWebSocket } from './interactions/webSocketIntegration.js';
+
+// Check authentication on page load
+if (!authService.isLoggedIn()) {
+    window.location.href = '../../login.html';
+}
 
 const COMPONENTS = [
     'pages/dashboard/dashboard.html',
@@ -44,6 +51,32 @@ class KanbanDashboard {
         );
         const htmls = await Promise.all(requests);
         htmls.forEach(html => document.body.insertAdjacentHTML('beforeend', html));
+    }
+
+    initAuthActions() {
+        const container = document.getElementById('AUTH_ACTIONS_CONTAINER');
+        if (!container) return;
+
+        const user = authService.getUser();
+        const userEmail = user ? user.email : 'User';
+
+        container.innerHTML = `
+            <div class="auth-actions">
+                <span class="auth-actions__user">${userEmail}</span>
+                <button class="auth-actions__logout-btn" id="logout-btn">Logout</button>
+            </div>
+        `;
+
+        const logoutBtn = document.getElementById('logout-btn');
+        logoutBtn.addEventListener('click', () => this.handleLogout());
+    }
+
+    handleLogout() {
+        if (confirm('Are you sure you want to logout?')) {
+            apiService.logout();
+            authService.clearAuth();
+            window.location.href = '../../login.html';
+        }
     }
 
     initColumns() {
@@ -264,6 +297,7 @@ class KanbanDashboard {
 
     async init() {
         await this.loadComponents();
+        this.initAuthActions();
         this.initColumns();
         this.initAddTaskButton();
         this.initModal();

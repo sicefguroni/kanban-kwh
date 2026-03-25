@@ -22,6 +22,10 @@ function isDbConnError(error) {
   const message = String(error?.message || '');
   return error?.code === 'ECONNREFUSED' || message.includes('ECONNREFUSED');
 }
+// All task routes require JWT authentication
+router.use(authMiddleware);
+
+// ===== PROTECTED TASK ROUTES =====
 
 // Get all tasks for a user
 router.get('/user/:userId', async (req, res) => {
