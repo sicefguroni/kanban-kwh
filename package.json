@@ -4,10 +4,10 @@
   "description": "Full-stack Kanban board application",
   "private": true,
   "scripts": {
-    "dev": "npm run dev:backend & npm run dev:frontend",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "http-server -p 5173 -c-1",
-    "start": "npm run start:backend & npm run start:frontend",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
     "start:backend": "cd backend && npm start",
     "start:frontend": "http-server -p 5173",
     "install:all": "npm install && cd backend && npm install && cd ..",
@@ -16,6 +16,7 @@
     "db:reset": "cd backend && npm run db:reset"
   },
   "devDependencies": {
+    "concurrently": "^9.1.2",
     "http-server": "^14.1.1"
   },
   "keywords": [

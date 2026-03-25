@@ -52,6 +52,8 @@ DB_PASSWORD=your_password_here
 PORT=3001
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
+# Optional: add more frontend origins for CORS (comma-separated)
+CORS_ALLOWED_ORIGINS=http://127.0.0.1:5500
 ```
 
 Replace `your_password_here` with the PostgreSQL password you set during installation.

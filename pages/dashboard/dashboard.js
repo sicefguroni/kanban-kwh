@@ -1,7 +1,7 @@
 import { StorageService } from '../../services/storage-service.js';
 import authService from '../../services/auth-service.js';
 import apiService from '../../services/api-service.js';
-import APIService from '../../services/api-service.js';
+import SyncManager from '../../services/sync-manager.js';
 import { COLUMN_STATUSES } from './constants.js';
 import { DashboardDOM } from './dom/dashboard-dom.js';
 import { DashboardRender } from './dom/dashboard-render.js';
@@ -36,7 +36,9 @@ class KanbanDashboard {
         this.deleteModal = new DashboardDeleteModal();
         this.renderer = null;
         this.$addTaskBtn = null;
+        this.$syncBadge = null;
         this.keyboard = null;
+        this.syncManager = null;
         // Serialize operations that mutate tasks + re-render.
         // This prevents race conditions when multiple UI events happen quickly.
         this._opChain = Promise.resolve();
@@ -67,15 +69,66 @@ class KanbanDashboard {
             </div>
         `;
 
+        this.$syncBadge = document.getElementById('SYNC_STATUS_BADGE');
+
         const logoutBtn = document.getElementById('logout-btn');
         logoutBtn.addEventListener('click', () => this.handleLogout());
     }
 
     handleLogout() {
         if (confirm('Are you sure you want to logout?')) {
+            this.syncManager?.destroy();
+            disconnectWebSocket();
             apiService.logout();
             authService.clearAuth();
             window.location.href = '../../login.html';
+        }
+    }
+
+    setSyncBadge({ online, syncing, queueSize, lastError }) {
+        if (!this.$syncBadge) return;
+
+        this.$syncBadge.classList.remove('is-online', 'is-offline', 'is-syncing', 'is-error');
+
+        if (lastError) {
+            this.$syncBadge.textContent = 'Sync error';
+            this.$syncBadge.classList.add('is-error');
+            return;
+        }
+
+        if (!online) {
+            this.$syncBadge.textContent = queueSize > 0 ? `Offline (${queueSize} pending)` : 'Offline';
+            this.$syncBadge.classList.add('is-offline');
+            return;
+        }
+
+        if (syncing) {
+            this.$syncBadge.textContent = queueSize > 0 ? `Syncing ${queueSize}...` : 'Syncing...';
+            this.$syncBadge.classList.add('is-syncing');
+            return;
+        }
+
+        if (queueSize > 0) {
+            this.$syncBadge.textContent = `Pending sync (${queueSize})`;
+            this.$syncBadge.classList.add('is-syncing');
+            return;
+        }
+
+        this.$syncBadge.textContent = 'Online';
+        this.$syncBadge.classList.add('is-online');
+    }
+
+    async queueAction(action) {
+        await StorageService.addToSyncQueue(action);
+    }
+
+    async syncFromServerIfOnline() {
+        if (!navigator.onLine) return;
+        try {
+            const serverTasks = await apiService.getTasks();
+            await StorageService.replaceLocalTasks(serverTasks || []);
+        } catch (error) {
+            console.warn('Failed to refresh tasks from server:', error?.message || error);
         }
     }
 
@@ -245,16 +298,67 @@ class KanbanDashboard {
         this.modal.openModalForEdit(taskData, (taskData, taskId) => this.saveTask(taskData, taskId));
     }
 
-    saveTask(taskData, taskId) {
+    async saveTask(taskData, taskId) {
+        const userId = authService.getUserId() || null;
         let selectedId = null;
+
         if (taskId) {
-            StorageService.updateTask(taskId, taskData);
+            const updatedTask = await StorageService.updateTask(taskId, {
+                ...taskData,
+                updated_at: new Date().toISOString(),
+            });
+            if (!updatedTask) return;
             selectedId = taskId;
+
+            try {
+                if (!navigator.onLine) throw new Error('offline');
+                const serverTask = await apiService.updateTask(taskId, {
+                    title: updatedTask.title,
+                    description: updatedTask.description,
+                    status: updatedTask.status,
+                    position: updatedTask.order || 0,
+                    updated_at: updatedTask.updated_at,
+                });
+                await StorageService.upsertTaskFromServer(serverTask);
+            } catch (error) {
+                await this.queueAction({
+                    action: 'update',
+                    taskId,
+                    task: updatedTask,
+                    updated_at: updatedTask.updated_at,
+                });
+            }
         } else {
-            const newTask = StorageService.addTask(taskData);
+            const newTask = await StorageService.addTask({
+                ...taskData,
+                user_id: userId,
+                updated_at: new Date().toISOString(),
+            });
             if (newTask) selectedId = newTask.id;
+
+            try {
+                if (!navigator.onLine) throw new Error('offline');
+                const serverTask = await apiService.createTask({
+                    id: newTask.id,
+                    userId,
+                    title: newTask.title,
+                    description: newTask.description,
+                    status: newTask.status,
+                    position: newTask.order || 0,
+                    updated_at: newTask.updated_at,
+                });
+                await StorageService.upsertTaskFromServer(serverTask);
+            } catch (error) {
+                await this.queueAction({
+                    action: 'create',
+                    taskId: newTask.id,
+                    task: newTask,
+                    updated_at: newTask.updated_at,
+                });
+            }
         }
-        this.renderTasks();
+
+        await this.renderTasks();
         if (selectedId) this.keyboard?.selectTaskId(selectedId);
     }
 
@@ -271,12 +375,30 @@ class KanbanDashboard {
         this.deleteModal.open(taskId);
     }
 
-    handleDropCard(newStatus, taskId, insertIndex) {
-        const task = StorageService.getTask(taskId);
+    async handleDropCard(newStatus, taskId, insertIndex) {
+        const task = await StorageService.getTask(taskId);
         if (task) {
-            StorageService.moveTask(taskId, newStatus, insertIndex);
-            this.renderTasks();
+            const movedTask = await StorageService.moveTask(taskId, newStatus, insertIndex);
+            if (!movedTask) return;
+            await this.renderTasks();
             this.keyboard?.selectTaskId(taskId);
+
+            try {
+                if (!navigator.onLine) throw new Error('offline');
+                const serverTask = await apiService.updateTask(taskId, {
+                    status: movedTask.status,
+                    position: movedTask.order || 0,
+                    updated_at: movedTask.updated_at,
+                });
+                await StorageService.upsertTaskFromServer(serverTask);
+            } catch (error) {
+                await this.queueAction({
+                    action: 'move',
+                    taskId,
+                    task: movedTask,
+                    updated_at: movedTask.updated_at,
+                });
+            }
         }
     }
 
@@ -297,6 +419,7 @@ class KanbanDashboard {
 
     async init() {
         await this.loadComponents();
+        await StorageService.init();
         this.initAuthActions();
         this.initColumns();
         this.initAddTaskButton();
@@ -312,9 +435,22 @@ class KanbanDashboard {
         });
 
         this.deleteModal.init({
-            onConfirmDelete: (taskId) => {
-                StorageService.deleteTask(taskId);
-                this.renderTasks();
+            onConfirmDelete: async (taskId) => {
+                const task = await StorageService.getTask(taskId);
+                await StorageService.deleteTask(taskId);
+                await this.renderTasks();
+
+                try {
+                    if (!navigator.onLine) throw new Error('offline');
+                    await apiService.deleteTask(taskId);
+                } catch (error) {
+                    await this.queueAction({
+                        action: 'delete',
+                        taskId,
+                        task,
+                        updated_at: new Date().toISOString(),
+                    });
+                }
             },
         });
 
@@ -335,45 +471,26 @@ class KanbanDashboard {
             isModalOpen: () => document.querySelector('.modal-overlay.is-open') != null,
         });
 
-        // Initialize user and WebSocket - use shared demo user so both browsers sync
-        const DEMO_EMAIL = 'demo@kanban.local';
-        const DEMO_USER_NAME = 'Demo User';
-        let userId = null;
+        this.syncManager = new SyncManager({
+            onStatusChange: (status) => this.setSyncBadge(status),
+            onAfterSync: async () => {
+                await this.syncFromServerIfOnline();
+                await this.renderTasks();
+            },
+        });
+        await this.syncManager.init();
 
-        // Try to get existing demo user by email or create one
-        try {
-            try {
-                // Try to get existing user by email
-                const existingUser = await fetch(`http://localhost:3002/api/users/email/${encodeURIComponent(DEMO_EMAIL)}`)
-                    .then(r => {
-                        if (!r.ok) throw new Error('User not found');
-                        return r.json();
-                    });
-                userId = existingUser.id;
-                console.log('✓ Using existing demo user:', userId);
-            } catch (err) {
-                // User doesn't exist, create it
-                const newUser = await APIService.createUser({
-                    email: DEMO_EMAIL,
-                    name: DEMO_USER_NAME
-                });
-                userId = newUser.id;
-                console.log('✓ Created demo user:', userId);
-            }
-            localStorage.setItem('userId', userId);
-        } catch (error) {
-            console.error('Failed to initialize user:', error);
-            // Fallback - generate a temporary ID (won't sync across browsers but won't crash)
-            userId = `demo-${Math.random().toString(36).substr(2, 9)}`;
-            localStorage.setItem('userId', userId);
-        }
+        await this.syncFromServerIfOnline();
+
+        const userId = authService.getUserId() || localStorage.getItem('userId') || 'anonymous';
+        localStorage.setItem('userId', userId);
 
         // Setup WebSocket listeners
         this.wsCleanup = setupWebSocketIntegration({
             userId,
-            onTaskCreated: (task) => this.renderTasks(),
-            onTaskUpdated: (task) => this.renderTasks(),
-            onTaskDeleted: (taskId) => this.renderTasks(),
+            onTaskCreated: async () => this.renderTasks(),
+            onTaskUpdated: async () => this.renderTasks(),
+            onTaskDeleted: async () => this.renderTasks(),
         });
 
         // Connect to WebSocket

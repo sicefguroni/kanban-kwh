@@ -142,13 +142,8 @@ router.post('/login', async (req, res) => {
       token
     });
   } catch (error) {
-<<<<<<< feature/rest-api-testing
-    console.error('Error updating user:', error);
-    res.status(isDbConnError(error) ? 503 : 500).json({ error: 'Failed to update user' });
-=======
     console.error('Error logging in:', error);
-    res.status(500).json({ error: 'Failed to log in' });
->>>>>>> dev
+    res.status(isDbConnError(error) ? 503 : 500).json({ error: 'Failed to log in' });
   }
 });
 
@@ -166,13 +161,8 @@ router.get('/me', authMiddleware, async (req, res) => {
     }
     res.json(result.rows[0]);
   } catch (error) {
-<<<<<<< feature/rest-api-testing
-    console.error('Error deleting user:', error);
-    res.status(isDbConnError(error) ? 503 : 500).json({ error: 'Failed to delete user' });
-=======
     console.error('Error fetching user:', error);
-    res.status(500).json({ error: 'Failed to fetch user' });
->>>>>>> dev
+    res.status(isDbConnError(error) ? 503 : 500).json({ error: 'Failed to fetch user' });
   }
 });
 

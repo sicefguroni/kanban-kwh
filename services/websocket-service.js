@@ -3,6 +3,8 @@
  * Manages WebSocket connection and event listeners
  */
 
+import StorageService from './storage-service.js';
+
 class WebSocketService {
   constructor() {
     this.ws = null;
@@ -13,6 +15,7 @@ class WebSocketService {
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.reconnectDelay = 3000; // milliseconds
+    this.taskUpdateHandler = null;
   }
 
   /**
@@ -46,10 +49,10 @@ class WebSocketService {
           resolve();
         };
 
-        this.ws.onmessage = (event) => {
+        this.ws.onmessage = async (event) => {
           try {
             const message = JSON.parse(event.data);
-            this.handleMessage(message);
+            await this.handleMessage(message);
           } catch (error) {
             console.error('Error parsing WebSocket message:', error);
           }
@@ -110,10 +113,14 @@ class WebSocketService {
    * @private
    * @param {object} message - The message object
    */
-  handleMessage(message) {
+  async handleMessage(message) {
     const { type, task, timestamp } = message;
 
     console.log(`📨 Received ${type} at ${timestamp}`);
+
+    if (type.startsWith('TASK_')) {
+      await this.applyTaskMessage(type, task);
+    }
 
     // Call all listeners for this message type
     if (this.listeners.has(type)) {
@@ -136,6 +143,24 @@ class WebSocketService {
         }
       });
     }
+  }
+
+  async applyTaskMessage(type, task) {
+    if (!task) return;
+
+    if (type === 'TASK_DELETED') {
+      await StorageService.removeTaskLocal(task.id);
+    } else {
+      await StorageService.upsertTaskFromServer(task);
+    }
+
+    if (typeof this.taskUpdateHandler === 'function') {
+      await this.taskUpdateHandler(task, type);
+    }
+  }
+
+  setTaskUpdateHandler(handler) {
+    this.taskUpdateHandler = handler;
   }
 
   /**
