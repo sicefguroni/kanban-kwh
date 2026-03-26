@@ -1,4 +1,5 @@
 import pool from './connection.js';
+import { runTaskLifecycleMigrations } from './migrations.js';
 
 const schema = `
 -- Create USERS table
@@ -36,6 +37,7 @@ async function initializeDatabase() {
   try {
     console.log('Initializing database schema...');
     await client.query(schema);
+    await runTaskLifecycleMigrations(client);
     console.log('✓ Database schema initialized successfully');
   } catch (error) {
     console.error('Error initializing database:', error);

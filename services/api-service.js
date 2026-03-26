@@ -3,7 +3,7 @@
  * This service handles all communication with the Node.js/Express API
  */
 
-const DEFAULT_API_BASE_URL = 'http://localhost:3002/api';
+const DEFAULT_API_BASE_URL = 'http://localhost:3001/api';
 const API_BASE_STORAGE_KEY = 'kanban_api_base_url';
 
 function normalizeApiBaseUrl(url) {

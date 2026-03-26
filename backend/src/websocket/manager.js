@@ -14,12 +14,21 @@ class WebSocketManager {
    * @param {string} userId - The user ID
    * @param {WebSocket} ws - The WebSocket connection
    */
+  _key(userId) {
+    return userId == null ? '' : String(userId).trim();
+  }
+
   addConnection(userId, ws) {
-    if (!this.userConnections.has(userId)) {
-      this.userConnections.set(userId, new Set());
+    const key = this._key(userId);
+    if (!key) {
+      console.warn('⚠ WebSocket addConnection: empty userId');
+      return;
     }
-    this.userConnections.get(userId).add(ws);
-    console.log(`✓ Client connected for user ${userId}. Total connections: ${this.userConnections.get(userId).size}`);
+    if (!this.userConnections.has(key)) {
+      this.userConnections.set(key, new Set());
+    }
+    this.userConnections.get(key).add(ws);
+    console.log(`✓ Client connected for user ${key}. Total connections: ${this.userConnections.get(key).size}`);
   }
 
   /**
@@ -28,14 +37,13 @@ class WebSocketManager {
    * @param {WebSocket} ws - The WebSocket connection
    */
   removeConnection(userId, ws) {
-    if (this.userConnections.has(userId)) {
-      this.userConnections.get(userId).delete(ws);
-      console.log(`✓ Client disconnected for user ${userId}. Total connections: ${this.userConnections.get(userId).size}`);
-      
-      // Clean up empty user entries
-      if (this.userConnections.get(userId).size === 0) {
-        this.userConnections.delete(userId);
-      }
+    const key = this._key(userId);
+    if (!key || !this.userConnections.has(key)) return;
+    this.userConnections.get(key).delete(ws);
+    const remaining = this.userConnections.get(key).size;
+    console.log(`✓ Client disconnected for user ${key}. Total connections: ${remaining}`);
+    if (remaining === 0) {
+      this.userConnections.delete(key);
     }
   }
 
@@ -45,11 +53,12 @@ class WebSocketManager {
    * @param {object} message - The message object to broadcast
    */
   broadcastToUser(userId, message) {
-    if (!this.userConnections.has(userId)) {
+    const key = this._key(userId);
+    if (!key || !this.userConnections.has(key)) {
       return;
     }
 
-    const connections = this.userConnections.get(userId);
+    const connections = this.userConnections.get(key);
     const messageStr = JSON.stringify(message);
 
     connections.forEach(ws => {
@@ -81,7 +90,8 @@ class WebSocketManager {
    * @returns {number} Number of connections
    */
   getConnectionCount(userId) {
-    return this.userConnections.has(userId) ? this.userConnections.get(userId).size : 0;
+    const key = this._key(userId);
+    return this.userConnections.has(key) ? this.userConnections.get(key).size : 0;
   }
 
   /**

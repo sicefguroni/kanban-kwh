@@ -7,6 +7,24 @@ function nowIso() {
     return new Date().toISOString();
 }
 
+/** Map API / DB status strings to UI column labels (COLUMN_STATUSES). */
+function normalizeTaskStatusForUi(status) {
+    const raw = String(status ?? '').trim();
+    if (!raw) return 'To Do';
+    const lower = raw.toLowerCase();
+    const map = {
+        todo: 'To Do',
+        'to do': 'To Do',
+        'in-progress': 'In Progress',
+        'in progress': 'In Progress',
+        inprogress: 'In Progress',
+        done: 'Done',
+    };
+    if (map[lower]) return map[lower];
+    if (raw === 'To Do' || raw === 'In Progress' || raw === 'Done') return raw;
+    return raw;
+}
+
 function createUuidV4() {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
         return crypto.randomUUID();
@@ -82,7 +100,7 @@ class StorageServiceClass {
             id: task.id || createUuidV4(),
             title: task.title || '',
             description: task.description || '',
-            status: task.status || 'To Do',
+            status: normalizeTaskStatusForUi(task.status),
             order: Number.isFinite(task.order) ? task.order : 0,
             deadline: task.deadline || '',
             user_id: task.user_id || null,
@@ -115,9 +133,24 @@ class StorageServiceClass {
             queued_at: nowIso(),
         };
 
-        const result = await this._withStore(SYNC_QUEUE_STORE, 'readwrite', (store) => store.add(queueItem));
-        dispatchQueueChanged();
-        return result;
+        const db = await this._getDb();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(SYNC_QUEUE_STORE, 'readwrite');
+            const store = tx.objectStore(SYNC_QUEUE_STORE);
+            const addReq = store.add(queueItem);
+            addReq.onsuccess = () => {
+                const id = addReq.result;
+                const withId = { ...queueItem, queue_id: id };
+                const putReq = store.put(withId);
+                putReq.onsuccess = () => {
+                    dispatchQueueChanged();
+                    resolve(id);
+                };
+                putReq.onerror = () => reject(putReq.error || new Error('sync queue put failed'));
+            };
+            addReq.onerror = () => reject(addReq.error || new Error('sync queue add failed'));
+            tx.onerror = () => reject(tx.error || new Error('sync queue transaction failed'));
+        });
     }
 
     async getSyncQueue() {
@@ -215,7 +248,7 @@ class StorageServiceClass {
             id: serverTask.id,
             title: serverTask.title || '',
             description: serverTask.description || '',
-            status: serverTask.status || 'To Do',
+            status: normalizeTaskStatusForUi(serverTask.status),
             order: Number.isFinite(serverTask.position) ? serverTask.position : (serverTask.order ?? 0),
             deadline: serverTask.deadline || '',
             user_id: serverTask.user_id || null,

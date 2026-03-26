@@ -15,9 +15,11 @@ export function initializeWebSocket(server) {
   const wss = new WebSocketServer({ server });
 
   wss.on('connection', (ws, req) => {
-    // Extract userId from URL query string or headers
-    // Format: ws://localhost:3001?userId=<userId>
-    const url = new URL(req.url, `http://${req.headers.host}`);
+    // Extract userId from query (browsers may send path as / or /?userId=...)
+    const host = req.headers.host || 'localhost';
+    const raw = req.url || '/';
+    const pathOrQuery = raw.startsWith('/') ? raw : `/${raw}`;
+    const url = new URL(pathOrQuery, `http://${host}`);
     const userId = url.searchParams.get('userId');
 
     if (!userId) {
@@ -92,13 +94,16 @@ export function broadcastTaskEvent(task, eventType, userId = null) {
     timestamp: new Date().toISOString()
   };
 
-  if (userId) {
-    wsManager.broadcastToUser(userId, message);
+  const uid = userId != null && String(userId).trim() !== '' ? String(userId).trim() : null;
+
+  if (uid) {
+    wsManager.broadcastToUser(uid, message);
   } else {
     wsManager.broadcastToAll(message);
   }
 
-  console.log(`📡 Broadcasting ${eventType} for task ${task.id}`);
+  const tid = task?.id ?? '?';
+  console.log(`📡 Broadcasting ${eventType} for task ${tid} → user ${uid || 'all'}`);
 }
 
 export default { initializeWebSocket, broadcastTaskEvent };

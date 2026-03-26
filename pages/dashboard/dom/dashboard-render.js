@@ -7,14 +7,18 @@ export class DashboardRender {
         this.columnInstances = columnInstances;
         this._onEdit = null;
         this._onDelete = null;
+        this._onAfterStatusChange = null;
         this._afterRender = null;
         this._renderChain = Promise.resolve();
     }
 
-    async renderTasks(onEdit, onDelete) {
+    async renderTasks(onEdit, onDelete, onAfterStatusChange) {
         this._renderChain = this._renderChain.then(async () => {
             this._onEdit = onEdit;
             this._onDelete = onDelete;
+            if (onAfterStatusChange !== undefined) {
+                this._onAfterStatusChange = onAfterStatusChange;
+            }
             this.clearAllColumns();
             for (const status of COLUMN_STATUSES) {
                 // Sequential rendering keeps DOM updates deterministic when the API is slow.
@@ -82,8 +86,10 @@ export class DashboardRender {
                         }
                     }
 
-                    // re-render using stored callbacks
                     await this.renderTasks(this._onEdit, this._onDelete);
+                    if (this._onAfterStatusChange) {
+                        await this._onAfterStatusChange(taskData.id);
+                    }
                 } catch (err) {
                     // eslint-disable-next-line no-alert
                     alert(err?.message || 'Failed to update task');

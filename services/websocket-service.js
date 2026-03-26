@@ -4,11 +4,26 @@
  */
 
 import StorageService from './storage-service.js';
+import apiService from './api-service.js';
+
+/** Build ws/wss URL from the same host as the REST API (e.g. ngrok, different port). */
+export function wsUrlFromApiBase(apiBaseUrl) {
+  const raw = String(apiBaseUrl || '').trim().replace(/\/$/, '');
+  const withoutApi = raw.replace(/\/api$/i, '');
+  if (!withoutApi) return 'ws://localhost:3001';
+  try {
+    const u = new URL(withoutApi);
+    const wsProto = u.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${wsProto}//${u.host}`;
+  } catch {
+    return 'ws://localhost:3001';
+  }
+}
 
 class WebSocketService {
   constructor() {
     this.ws = null;
-    this.url = 'ws://localhost:3002';
+    this.url = 'ws://localhost:3001';
     this.userId = null;
     this.listeners = new Map(); // Map of event type -> Set of callback functions
     this.isConnecting = false;
@@ -24,6 +39,11 @@ class WebSocketService {
    * @returns {Promise<void>}
    */
   connect(userId) {
+    const uid = userId == null ? '' : String(userId).trim();
+    if (!uid) {
+      return Promise.reject(new Error('WebSocket: missing userId (must match JWT user id)'));
+    }
+
     return new Promise((resolve, reject) => {
       if (this.isConnecting) {
         reject(new Error('Connection already in progress'));
@@ -36,17 +56,35 @@ class WebSocketService {
       }
 
       this.isConnecting = true;
-      this.userId = userId;
+      this.userId = uid;
+      this.url = wsUrlFromApiBase(apiService.getBaseURL());
+
+      let opened = false;
+      let settled = false;
+
+      const finishFail = (err) => {
+        if (settled) return;
+        settled = true;
+        this.isConnecting = false;
+        reject(err);
+      };
+
+      const finishOk = () => {
+        if (settled) return;
+        settled = true;
+        this.isConnecting = false;
+        this.reconnectAttempts = 0;
+        resolve();
+      };
 
       try {
-        const url = `${this.url}?userId=${encodeURIComponent(userId)}`;
+        const url = `${this.url}?userId=${encodeURIComponent(uid)}`;
         this.ws = new WebSocket(url);
 
         this.ws.onopen = () => {
-          console.log('✓ WebSocket connected');
-          this.isConnecting = false;
-          this.reconnectAttempts = 0;
-          resolve();
+          opened = true;
+          console.log('✓ WebSocket connected', this.url);
+          finishOk();
         };
 
         this.ws.onmessage = async (event) => {
@@ -58,16 +96,18 @@ class WebSocketService {
           }
         };
 
-        this.ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
-          this.isConnecting = false;
-          reject(error);
+        this.ws.onerror = () => {
+          console.error('WebSocket error (see close code if connection failed)');
         };
 
-        this.ws.onclose = () => {
-          console.log('✗ WebSocket disconnected');
+        this.ws.onclose = (ev) => {
+          console.log('✗ WebSocket disconnected', ev.code, ev.reason || '');
           this.isConnecting = false;
-          this.attemptReconnect();
+          if (!opened) {
+            finishFail(new Error(`WebSocket closed before open (code ${ev.code})`));
+          } else {
+            this.attemptReconnect();
+          }
         };
       } catch (error) {
         this.isConnecting = false;
@@ -90,8 +130,10 @@ class WebSocketService {
     console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
     setTimeout(() => {
-      if (this.userId) {
-        this.connect(this.userId).catch(err => {
+      const uid = this.userId;
+      if (uid) {
+        this.url = wsUrlFromApiBase(apiService.getBaseURL());
+        this.connect(uid).catch((err) => {
           console.error('Reconnection failed:', err);
         });
       }
