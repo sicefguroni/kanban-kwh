@@ -6,7 +6,12 @@ This guide will help you set up the PostgreSQL database and Node.js backend for 
 
 ### 1. Check if PostgreSQL is Installed
 
-**On Windows (PowerShell):**
+**Linux / macOS (bash):**
+```bash
+psql --version
+```
+
+**Windows (PowerShell):**
 ```powershell
 psql --version
 ```
@@ -15,6 +20,14 @@ If it shows a version, PostgreSQL is installed. If not, proceed to install it.
 
 ### 2. Install PostgreSQL (if needed)
 
+**Linux (common options):**
+
+- **Arch Linux:** `sudo pacman -S postgresql` then follow the [Arch Wiki](https://wiki.archlinux.org/title/PostgreSQL) to initialize and start the cluster (`sudo -iu postgres initdb`, `sudo systemctl enable --now postgresql`).
+- **Debian / Ubuntu:** `sudo apt update && sudo apt install postgresql postgresql-contrib`
+- **Fedora:** `sudo dnf install postgresql-server postgresql-contrib` then initialize/start per Fedora docs.
+
+**macOS:** `brew install postgresql@16` (or current version), then `brew services start postgresql@16`.
+
 **Windows:**
 - Download from: https://www.postgresql.org/download/windows/
 - Use the official installer and follow the setup wizard
@@ -22,21 +35,35 @@ If it shows a version, PostgreSQL is installed. If not, proceed to install it.
 - Default port is `5432`
 
 **After Installation:**
+
 Verify PostgreSQL is running:
+
+**Linux / macOS:**
+```bash
+# May prompt for the postgres user password, or use peer auth:
+psql -U postgres -c "SELECT version();"
+# If your distro uses a local postgres OS user:
+sudo -u postgres psql -c "SELECT version();"
+```
+
+**Windows (PowerShell):**
 ```powershell
-# Test connection
 psql -U postgres -c "SELECT version();"
 ```
 
 ## Backend Setup
 
 ### 1. Navigate to Backend Directory
-```powershell
+
+**Linux / macOS / Windows (same):**
+```bash
 cd backend
 ```
 
 ### 2. Install Dependencies
-```powershell
+
+**Linux / macOS / Windows (same):**
+```bash
 npm install
 ```
 
@@ -60,17 +87,26 @@ Replace `your_password_here` with the PostgreSQL password you set during install
 
 ### 4. Create the Database
 
-**Using psql (Windows PowerShell):**
+**Linux / macOS:**
+```bash
+psql -U postgres -c "CREATE DATABASE kwh_kanban;"
+# If you must run as the local postgres user:
+sudo -u postgres createdb kwh_kanban
+```
+
+**Windows (PowerShell):**
 ```powershell
 psql -U postgres -c "CREATE DATABASE kwh_kanban;"
 ```
 
-You'll be prompted for the PostgreSQL password.
+You'll be prompted for the PostgreSQL password when using `-U postgres` (unless peer auth is configured).
 
 ### 5. Initialize Database Schema
 
 From the `backend/` directory:
-```powershell
+
+**Linux / macOS / Windows (same):**
+```bash
 npm run db:init
 ```
 
@@ -78,7 +114,8 @@ This will create the `users` and `tasks` tables with the proper schema.
 
 ### 6. Start the Backend Server
 
-```powershell
+**Linux / macOS / Windows (same):**
+```bash
 npm run dev
 ```
 
@@ -214,7 +251,8 @@ if (serverData.updated_at > localData.updated_at) {
 
 ## Useful Commands
 
-```powershell
+**Linux / macOS (bash):**
+```bash
 # Start dev server with auto-reload
 npm run dev
 
@@ -227,17 +265,39 @@ npm run db:reset
 
 # Connect to database directly with psql
 psql -U postgres -d kwh_kanban
+# Or as local postgres user on some Linux setups:
+sudo -u postgres psql -d kwh_kanban
+```
+
+**Windows (PowerShell):**
+```powershell
+npm run dev
+npm start
+npm run db:init
+npm run db:reset
+psql -U postgres -d kwh_kanban
 ```
 
 ## Troubleshooting
 
 ### "Connection refused" error
 - Verify PostgreSQL is running
+- **Linux:** `sudo systemctl status postgresql` (service name may vary, e.g. `postgresql-16`)
 - Check DB_HOST, DB_PORT, and DB_NAME in .env
-- Ensure the database exists: `psql -U postgres -c "SELECT datname FROM pg_database WHERE datname='kwh_kanban';"`
+- Ensure the database exists:
+
+**Linux / macOS:**
+```bash
+psql -U postgres -c "SELECT datname FROM pg_database WHERE datname='kwh_kanban';"
+```
+
+**Windows:**
+```powershell
+psql -U postgres -c "SELECT datname FROM pg_database WHERE datname='kwh_kanban';"
+```
 
 ### "database does not exist" error
-- Create it: `psql -U postgres -c "CREATE DATABASE kwh_kanban;"`
+- Create it (see [Create the Database](#4-create-the-database) above).
 
 ### "password authentication failed"
 - Verify the password in .env matches your PostgreSQL password
@@ -245,7 +305,21 @@ psql -U postgres -d kwh_kanban
 
 ### Port 3001 already in use
 - Change PORT in .env
-- Or kill the process using the port: `Get-Process -Id (Get-NetTCPConnection -LocalPort 3001).OwningProcess | Stop-Process`
+
+**Linux / macOS — find and stop the process using the port:**
+```bash
+# Replace 3001 with your PORT if different
+lsof -i :3001
+kill <PID>
+
+# Or in one line (Linux with fuser):
+fuser -k 3001/tcp
+```
+
+**Windows (PowerShell):**
+```powershell
+Get-Process -Id (Get-NetTCPConnection -LocalPort 3001).OwningProcess | Stop-Process
+```
 
 ## Next Steps
 

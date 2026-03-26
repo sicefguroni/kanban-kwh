@@ -13,9 +13,24 @@ class SyncManager {
     this.onStatusChange = onStatusChange;
     this.onAfterSync = onAfterSync;
     this.syncing = false;
+    this._queueSyncTimer = null;
     this.boundOnlineHandler = this._handleOnline.bind(this);
     this.boundOfflineHandler = this._emitStatus.bind(this);
-    this.boundQueueHandler = this._emitStatus.bind(this);
+    this.boundQueueHandler = this._onQueueChanged.bind(this);
+  }
+
+  /**
+   * When the offline queue changes, update the badge and flush the queue soon after.
+   */
+  _onQueueChanged() {
+    this._emitStatus();
+    clearTimeout(this._queueSyncTimer);
+    this._queueSyncTimer = setTimeout(() => {
+      this._queueSyncTimer = null;
+      if (navigator.onLine && !this.syncing) {
+        this.syncNow();
+      }
+    }, 400);
   }
 
   async init() {
@@ -33,6 +48,8 @@ class SyncManager {
   }
 
   destroy() {
+    clearTimeout(this._queueSyncTimer);
+    this._queueSyncTimer = null;
     window.removeEventListener('online', this.boundOnlineHandler);
     window.removeEventListener('offline', this.boundOfflineHandler);
     window.removeEventListener('sync-queue:changed', this.boundQueueHandler);
@@ -62,6 +79,7 @@ class SyncManager {
     this.syncing = true;
     await this._emitStatus();
 
+    let queueError = null;
     try {
       const queue = await this.storage.getSyncQueue();
 
@@ -70,23 +88,32 @@ class SyncManager {
         const result = response?.results?.[0];
 
         if (result?.status === 'applied' || result?.status === 'skipped') {
-          await this.storage.removeSyncQueueItem(item.queue_id);
+          const id = result.queue_id ?? item.queue_id;
+          if (id != null) {
+            await this.storage.removeSyncQueueItem(id);
+          }
         } else {
           throw new Error(result?.reason || 'Failed to sync queued item');
         }
       }
 
-      if (typeof this.onAfterSync === 'function') {
-        await this.onAfterSync();
-      }
-
       await this._emitStatus();
     } catch (error) {
+      queueError = error;
       await this._emitStatus(error);
-      throw error;
+      // Do not rethrow: fetch/network failures would become uncaught promise rejections
+      // for callers; the UI already shows lastError via onStatusChange.
     } finally {
       this.syncing = false;
-      await this._emitStatus();
+      await this._emitStatus(queueError);
+    }
+
+    if (!queueError && typeof this.onAfterSync === 'function') {
+      try {
+        await this.onAfterSync();
+      } catch (e) {
+        console.warn('SyncManager onAfterSync failed:', e);
+      }
     }
   }
 }

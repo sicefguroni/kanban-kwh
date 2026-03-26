@@ -13,6 +13,9 @@ import usersRouter from './routes/users.js';
 import tasksRouter from './routes/tasks.js';
 import { initializeWebSocket } from './websocket/handler.js';
 import { setDbReady } from './db/connection.js';
+import { apiLimiter } from './middleware/rate-limit.js';
+import { startScheduledJobs } from './jobs/scheduler.js';
+import { printStartupBanner } from './print-startup.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,8 +24,12 @@ const envPath = join(__dirname, '../.env');
 dotenv.config({ path: envPath, override: true });
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT;
 const server = createServer(app);
+
+if (process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
+}
 
 const defaultAllowedOrigins = [
   'http://localhost:5173',
@@ -101,6 +108,8 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.use('/api', apiLimiter);
+
 // API info endpoint
 app.get('/api', (req, res) => {
   res.json({ 
@@ -162,45 +171,17 @@ async function start() {
       dbConnected = true;
       setDbReady(true);
       await initializeDatabase();
+      startScheduledJobs();
     } catch (dbError) {
       console.warn('⚠ Could not connect to database:', dbError.message);
       setDbReady(false);
     }
 
     server.listen(PORT, () => {
-      console.log(`✓ Server running on http://localhost:${PORT}`);
-      console.log(`✓ WebSocket available at ws://localhost:${PORT}`);
-      console.log(`✓ API Base URL: http://localhost:${PORT}/api`);
-      console.log('\n📋 Authentication Methods:');
-      console.log('  ✓ Email/Password login');
-      if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-        console.log('  ✓ Google OAuth');
-      } else {
-        console.log('  ⚠️  Google OAuth (not configured)');
-      }
-      console.log('\n📍 Available endpoints:');
-      console.log('  POST   /api/users/register - Register new user');
-      console.log('  POST   /api/users/login - Login user');
-      console.log('  GET    /api/users/me - Get current user (requires auth)');
-      console.log('  GET    /api/users - Get all users (requires auth)');
-      console.log('  GET    /api/users/:id - Get user by ID (requires auth)');
-      console.log('  PUT    /api/users/:id - Update user (requires auth)');
-      console.log('  DELETE /api/users/:id - Delete user (requires auth)');
-      console.log('');
-      console.log('  GET    /api/tasks/user/:userId - Get tasks for user (requires auth)');
-      console.log('  GET    /api/tasks - Get tasks for current user (requires auth)');
-      console.log('  GET    /api/tasks/status/:status - Get tasks by status (requires auth)');
-      console.log('  GET    /api/tasks/:id - Get task by ID (requires auth)');
-      console.log('  POST   /api/tasks - Create task (requires auth)');
-      console.log('  POST   /api/tasks/sync - Batch sync offline actions (requires auth)');
-      console.log('  PUT    /api/tasks/:id - Update task (requires auth)');
-      console.log('  DELETE /api/tasks/:id - Delete task (requires auth)');
-      console.log('');
-      if (dbConnected) {
-        console.log('✓ Database connected');
-      } else {
-        console.log('⚠ Database not available - restart after PostgreSQL is running');
-      }
+      printStartupBanner(PORT, {
+        dbConnected,
+        googleOAuth: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
+      });
     });
   } catch (error) {
     console.error('Failed to start server:', error.message);

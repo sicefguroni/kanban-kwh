@@ -1,25 +1,19 @@
 /**
  * WebSocket Integration for Dashboard
- * Handles syncing real-time task updates with the dashboard
+ * Applies server events (storage is updated in websocket-service) then re-renders.
  */
 
 import wsService from '../../../services/websocket-service.js';
 
-// Track subscriptions to avoid duplicates
 let isSetup = false;
+let debounceTimer = null;
 
 /**
- * Set up WebSocket listeners for task updates
- * @param {object} config - Configuration object
- * @param {string} config.userId - The user ID to connect with
- * @param {Function} config.onTaskCreated - Callback when task is created
- * @param {Function} config.onTaskUpdated - Callback when task is updated
- * @param {Function} config.onTaskDeleted - Callback when task is deleted
- * @returns {Function} Cleanup function to remove listeners
+ * @param {object} config
+ * @param {string} config.userId
+ * @param {() => Promise<void>} config.onRefresh - single debounced callback after any task event
  */
-export function setupWebSocketIntegration({ userId, onTaskCreated, onTaskUpdated, onTaskDeleted }) {
-  console.log('🔧 Setting up WebSocket integration for user:', userId);
-  
+export function setupWebSocketIntegration({ userId, onRefresh }) {
   if (isSetup) {
     console.warn('⚠️ WebSocket integration already setup - skipping');
     return () => {};
@@ -27,49 +21,44 @@ export function setupWebSocketIntegration({ userId, onTaskCreated, onTaskUpdated
 
   isSetup = true;
 
-  // Use a single callback path to avoid duplicate rerenders per websocket event.
+  const scheduleRefresh = () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(async () => {
+      debounceTimer = null;
+      try {
+        await onRefresh?.();
+      } catch (e) {
+        console.warn('WebSocket onRefresh failed:', e);
+      }
+    }, 48);
+  };
+
   wsService.setTaskUpdateHandler(async (task, type) => {
-    if (type === 'TASK_CREATED' && onTaskCreated) await onTaskCreated(task);
-    if (type === 'TASK_UPDATED' && onTaskUpdated) await onTaskUpdated(task);
-    if (type === 'TASK_DELETED' && onTaskDeleted) await onTaskDeleted(task.id);
+    if (!type?.startsWith('TASK_')) return;
+    scheduleRefresh();
   });
 
-  // Return cleanup function
   return () => {
+    clearTimeout(debounceTimer);
     wsService.setTaskUpdateHandler(null);
     isSetup = false;
   };
 }
 
-/**
- * Connect to WebSocket for a user
- * @param {string} userId - The user ID to connect with
- * @returns {Promise<void>}
- */
 export async function connectWebSocket(userId) {
   try {
     await wsService.connect(userId);
     console.log('✓ WebSocket connected for real-time updates');
   } catch (error) {
-    console.warn('Failed to connect WebSocket:', error.message);
-    // Don't throw - the app should continue working with localStorage
+    console.warn('Failed to connect WebSocket:', error?.message || error);
   }
 }
 
-/**
- * Disconnect from WebSocket
- */
 export function disconnectWebSocket() {
   wsService.disconnect();
   console.log('✓ WebSocket disconnected');
 }
 
-/**
- * Convert client task format to server task format for sending to API
- * 
- * @param {object} clientTask - Task from client
- * @returns {object} Task in server format
- */
 export function convertClientToServerFormat(clientTask) {
   return {
     title: clientTask.title,

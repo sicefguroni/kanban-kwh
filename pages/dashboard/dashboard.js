@@ -39,6 +39,9 @@ class KanbanDashboard {
         this.$syncBadge = null;
         this.keyboard = null;
         this.syncManager = null;
+        this._visibilityTimer = null;
+        this._pollTimer = null;
+        this._onVisibilityChange = null;
         // Serialize operations that mutate tasks + re-render.
         // This prevents race conditions when multiple UI events happen quickly.
         this._opChain = Promise.resolve();
@@ -77,6 +80,14 @@ class KanbanDashboard {
 
     handleLogout() {
         if (confirm('Are you sure you want to logout?')) {
+            clearTimeout(this._visibilityTimer);
+            this._visibilityTimer = null;
+            clearInterval(this._pollTimer);
+            this._pollTimer = null;
+            if (this._onVisibilityChange) {
+                document.removeEventListener('visibilitychange', this._onVisibilityChange);
+            }
+            this.wsCleanup?.();
             this.syncManager?.destroy();
             disconnectWebSocket();
             apiService.logout();
@@ -120,6 +131,29 @@ class KanbanDashboard {
 
     async queueAction(action) {
         await StorageService.addToSyncQueue(action);
+    }
+
+    /** Push local move (status/order) to the API or offline queue; used by drag-drop and checkbox. */
+    async pushTaskMoveToServer(taskId) {
+        const moved = await StorageService.getTask(taskId);
+        if (!moved) return;
+        try {
+            if (!navigator.onLine) throw new Error('offline');
+            const serverTask = await apiService.updateTask(taskId, {
+                status: moved.status,
+                position: moved.order || 0,
+                updated_at: moved.updated_at,
+            });
+            await StorageService.upsertTaskFromServer(serverTask);
+        } catch (error) {
+            await this.queueAction({
+                action: 'move',
+                taskId,
+                task: moved,
+                updated_at: moved.updated_at,
+            });
+        }
+        await this.syncManager?.syncNow?.();
     }
 
     async syncFromServerIfOnline() {
@@ -328,6 +362,7 @@ class KanbanDashboard {
                     updated_at: updatedTask.updated_at,
                 });
             }
+            await this.syncManager?.syncNow?.();
         } else {
             const newTask = await StorageService.addTask({
                 ...taskData,
@@ -356,6 +391,7 @@ class KanbanDashboard {
                     updated_at: newTask.updated_at,
                 });
             }
+            await this.syncManager?.syncNow?.();
         }
 
         await this.renderTasks();
@@ -367,7 +403,8 @@ class KanbanDashboard {
         this.renderer._afterRender = () => this.keyboard?.syncFocus();
         await this.renderer.renderTasks(
             (taskData) => this.openModalForEdit(taskData),
-            (taskId) => this.handleDeleteTask(taskId)
+            (taskId) => this.handleDeleteTask(taskId),
+            (taskId) => this.pushTaskMoveToServer(taskId)
         );
     }
 
@@ -382,23 +419,7 @@ class KanbanDashboard {
             if (!movedTask) return;
             await this.renderTasks();
             this.keyboard?.selectTaskId(taskId);
-
-            try {
-                if (!navigator.onLine) throw new Error('offline');
-                const serverTask = await apiService.updateTask(taskId, {
-                    status: movedTask.status,
-                    position: movedTask.order || 0,
-                    updated_at: movedTask.updated_at,
-                });
-                await StorageService.upsertTaskFromServer(serverTask);
-            } catch (error) {
-                await this.queueAction({
-                    action: 'move',
-                    taskId,
-                    task: movedTask,
-                    updated_at: movedTask.updated_at,
-                });
-            }
+            await this.pushTaskMoveToServer(taskId);
         }
     }
 
@@ -451,6 +472,7 @@ class KanbanDashboard {
                         updated_at: new Date().toISOString(),
                     });
                 }
+                await this.syncManager?.syncNow?.();
             },
         });
 
@@ -482,19 +504,45 @@ class KanbanDashboard {
 
         await this.syncFromServerIfOnline();
 
-        const userId = authService.getUserId() || localStorage.getItem('userId') || 'anonymous';
-        localStorage.setItem('userId', userId);
+        const userId = authService.getUserId();
+        if (userId) {
+            localStorage.setItem('userId', userId);
+        }
 
-        // Setup WebSocket listeners
+        // Realtime: WebSocket pushes task events; polling covers WS down / missed events
         this.wsCleanup = setupWebSocketIntegration({
             userId,
-            onTaskCreated: async () => this.renderTasks(),
-            onTaskUpdated: async () => this.renderTasks(),
-            onTaskDeleted: async () => this.renderTasks(),
+            onRefresh: async () => {
+                await this.renderTasks();
+            },
         });
 
-        // Connect to WebSocket
-        connectWebSocket(userId);
+        if (userId) {
+            connectWebSocket(userId).catch(() => {});
+        } else {
+            console.warn('No user id — skipping WebSocket (login user.id must be set)');
+        }
+
+        this._onVisibilityChange = () => {
+            if (document.visibilityState !== 'visible' || !navigator.onLine) return;
+            clearTimeout(this._visibilityTimer);
+            this._visibilityTimer = setTimeout(async () => {
+                await this.syncFromServerIfOnline();
+                await this.renderTasks();
+                await this.syncManager?.syncNow?.();
+                if (userId) {
+                    connectWebSocket(userId).catch(() => {});
+                }
+            }, 300);
+        };
+        document.addEventListener('visibilitychange', this._onVisibilityChange);
+
+        this._pollTimer = setInterval(() => {
+            if (document.visibilityState !== 'visible' || !navigator.onLine) return;
+            this.syncFromServerIfOnline()
+                .then(() => this.renderTasks())
+                .catch(() => {});
+        }, 10000);
 
         await this.renderTasks();
     }
