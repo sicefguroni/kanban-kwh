@@ -1,4 +1,0 @@
-$kind: http-request
-url: "{{base_url}}/api/users/email/podelapena2@up.edu.ph"
-method: GET
-order: 2000
