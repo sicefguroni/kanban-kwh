@@ -35,7 +35,7 @@ export function initializeGoogleStrategy(passport) {
             userId = uuidv4();
             const now = new Date();
             const generatedPassword = uuidv4(); // Random password for OAuth users
-            
+
             await pool.query(
               'INSERT INTO users (id, email, password, name, google_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
               [userId, email, generatedPassword, name, googleId, now, now]
