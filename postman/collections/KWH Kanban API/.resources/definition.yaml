@@ -1,0 +1,36 @@
+$kind: collection
+name: KWH Kanban API
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{auth_token}}'
+variables:
+  - key: base_url
+    value: 'http://localhost:3001/api'
+    type: default
+    enabled: true
+  - key: simple_server_url
+    value: 'http://localhost:3001'
+    type: default
+    enabled: true
+  - key: auth_token
+    value: ''
+    type: default
+    enabled: true
+  - key: user_id
+    value: ''
+    type: default
+    enabled: true
+  - key: user_email
+    value: 'user@example.com'
+    type: default
+    enabled: true
+  - key: task_id
+    value: ''
+    type: default
+    enabled: true
+  - key: task_status
+    value: 'todo'
+    type: default
+    enabled: true

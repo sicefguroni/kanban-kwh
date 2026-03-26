@@ -1,0 +1,92 @@
+$kind: http-request
+name: Sync (Batch/Offline Mode)
+url: "{{base_url}}/api/tasks/sync"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"actions\": [\r
+
+    \    {\r
+
+    \      \"queue_id\": \"TEST-SERIES-CREATE\",\r
+
+    \      \"action\": \"create\",\r
+
+    \      \"task\": {\r
+
+    \        \"id\": \"aaaa1111-aaaa-1111-aaaa-111111111111\",\r
+
+    \        \"title\": \"Series Test: Create\",\r
+
+    \        \"status\": \"To Do\",\r
+
+    \        \"order\": 1\r
+
+    \      },\r
+
+    \      \"updated_at\": \"2026-03-26T21:45:00Z\"\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"queue_id\": \"MOVE-TO-DONE\",\r
+
+    \      \"action\": \"move\",\r
+
+    \      \"taskId\": \"68745a4c-3c69-4992-ab60-72dd215bb9c6\",\r
+
+    \      \"task\": {\r
+
+    \        \"status\": \"Done\",\r
+
+    \        \"order\": 1\r
+
+    \      },\r
+
+    \      \"updated_at\": \"2026-03-26T21:50:00Z\"\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"queue_id\": \"DELETE-TASK\",\r
+
+    \      \"action\": \"delete\",\r
+
+    \      \"taskId\": \"dc71c747-69ff-4d6a-9a65-36c3163a5234\",\r
+
+    \      \"updated_at\": \"2026-03-26T21:50:00Z\"\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"queue_id\": \"MOVE-TO-IN-PROGRESS\",\r
+
+    \      \"action\": \"move\",\r
+
+    \      \"taskId\": \"3acdeaf7-ced5-44a5-8d3e-22bacbbaa855\",\r
+
+    \      \"task\": {\r
+
+    \        \"status\": \"In Progress\",\r
+
+    \        \"order\": 1\r
+
+    \      },\r
+
+    \      \"updated_at\": \"2026-03-26T21:50:00Z\"\r
+
+    \    }\r
+
+    \  ]\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI4N2RiNjc1MC03YmU3LTQ0NGItODc0OC02NTVhNTEzZDc0MDYiLCJpYXQiOjE3NzQ0OTI4OTAsImV4cCI6MTc3NDU3OTI5MH0.waV2iNmoGeCjfY8R0fBYadL52GE-GlkTsOd2t0qlcSk
+order: 7000

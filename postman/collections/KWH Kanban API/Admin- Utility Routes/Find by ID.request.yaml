@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{base_url}}/api/users/f3df6a65-ad6d-4f80-8816-cfba31add2eb"
+method: GET
+order: 3000
