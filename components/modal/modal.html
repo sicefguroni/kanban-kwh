@@ -1,0 +1,24 @@
+<template id="MODAL_TEMPLATE">
+    <div class="modal-overlay" aria-hidden="true">
+        <div class="modal" role="dialog" aria-labelledby="MODAL_TITLE" aria-modal="true">
+            <header class="modal__header">
+                <div class="modal__title-group">
+                    <h2 id="MODAL_TITLE" class="modal__title">Add New Task</h2>
+                    <p class="modal__subtitle">Create a new task for your Kanban board.</p>
+                </div>
+                <button type="button" class="modal__close" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </header>
+
+            <form class="modal__form" id="ADD_TASK_FORM">
+                <div id="MODAL_FORM_FIELDS" class="modal__form-fields"></div>
+                <footer class="modal__footer">
+                    <div id="MODAL_FOOTER_ACTIONS" class="modal__footer-actions"></div>
+                </footer>
+            </form>
+        </div>
+    </div>
+</template>

@@ -1,0 +1,334 @@
+.kanban-card {
+    display: flex;
+    padding: 0.8rem;
+    border: 1px solid var(--primary-border-color);
+    background-color: var(--primary-color);
+    border-radius: 0.8rem;
+    width: 100%;
+    position: relative;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.2s ease;
+    cursor: grab;
+}
+
+.kanban-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--accent-blue-border-soft);
+}
+
+.kanban-card:active {
+    cursor: grabbing;
+    transform: translateY(0);
+}
+
+.kanban-card__drag-handle {
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+.kanban-card__drag-handle img {
+    width: 16px;
+    height: 16px;
+    margin-right: 0.4rem;
+}
+
+.kanban-card__header {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.kanban-card__title {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.kanban-card__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    width: 100%;
+    flex: 1;
+    padding-left: 8px;
+}
+
+.kanban-card__header h3 {
+    font-size: 0.8rem;
+}
+
+.kanban-card__content p {
+    font-size: 0.7rem;
+    color: var(--secondary-text-color);
+    width: 100%;
+}
+
+.kanban-card__content .kanban-card__description {
+    display: none;
+    max-height: 80px;
+    overflow-y: auto;
+    word-break: break-word;
+    padding-right: 0.4rem;
+}
+
+.kanban-card__deadline {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    color: var(--secondary-text-color);
+    font-size: 0.9rem;
+}
+
+.kanban-card__deadline p {
+    font-size: 0.7rem;
+}
+
+.kanban-card__deadline-icon {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.kanban-card__deadline-icon.is-hidden {
+    display: none;
+}
+
+.kanban-card__deadline-icon img {
+    width: 12px;
+    height: 12px;
+    display: flex-start;
+    opacity: 0.6
+}
+
+.kanban-card__deadline-date {
+    margin: 0;
+}
+
+.kanban-card__actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-shrink: 0;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.kanban-card:hover .kanban-card__actions,
+.kanban-card.is-keyboard-focused .kanban-card__actions {
+    opacity: 1;
+}
+
+/* Keyboard focus: same as hover so selection is obvious and consistent */
+.kanban-card.is-keyboard-focused {
+    transform: translateY(-1px);
+    border-color: var(--accent-blue-border);
+}
+
+.kanban-card__action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    border-radius: 6px;
+    color: var(--secondary-text-color);
+    transition: color 0.2s ease;
+}
+
+.kanban-card__action-btn:hover {
+    color: var(--primary-text-color);
+}
+
+.kanban-card__action-btn svg {
+    width: 100%;
+    height: 100%;
+}
+
+.kanban-card.is-dragging {
+    opacity: 0.85;
+    cursor: grabbing;
+    transform: scale(1.02);
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.15s ease;
+    z-index: 1000;
+    border: 2px solid var(--accent-blue);
+    background-color: rgba(255, 255, 255, 0.98);
+}
+
+.kanban-card.is-dragging .kanban-card__title {
+    color: inherit;
+}
+
+.kanban-card.is-drag-over {
+    border-color: var(--accent-yellow);
+    background-color: var(--accent-yellow-muted);
+}
+
+.kanban-card__edit-btn {
+    color: var(--secondary-text-color);
+    width: 16px;
+    height: 16px;
+}
+
+.kanban-card__edit-btn:hover {
+    background-color: var(--accent-blue-muted);
+    color: var(--accent-blue-dark);
+    transform: scale(1.15);
+}
+
+.kanban-card__delete-btn {
+    color: var(--accent-red);
+    width: 16px;
+    height: 16px;
+}
+
+.kanban-card__delete-btn:hover {
+    background-color: var(--accent-red-muted);
+    color: var(--accent-red-dark);
+    transform: scale(1.15);
+}
+
+.kanban-card__body {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.kanban-card__checkbox {
+    width: 12px;
+    height: 12px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.kanban-card:has(.kanban-card__checkbox:checked) .kanban-card__title,
+.kanban-card:has(.kanban-card__checkbox:checked) .kanban-card__description,
+.kanban-card:has(.kanban-card__checkbox:checked) .kanban-card__deadline {
+    text-decoration: line-through;
+    color: var(--secondary-text-color);
+    opacity: 0.75;
+    transition: all 0.3s ease;
+}
+
+@media (min-width: 768px) {
+    .kanban-card {
+        padding: 1rem;
+    }
+
+    .kanban-card__drag-handle img {
+        width: 20px;
+        height: 20px;
+    }
+
+    .kanban-card__content {
+        gap: 0.3rem;
+    }
+
+    .kanban-card__header h3 {
+        font-size: 0.9rem;
+    }
+
+    .kanban-card__content p {
+        font-size: 0.8rem;
+    }
+
+    .kanban-card__content .kanban-card__description {
+        display: block;
+        max-height: 80px;
+        overflow-y: auto;
+        word-break: break-word;
+        padding-right: 0.4rem;
+    }
+
+    .kanban-card__deadline p {
+        font-size: 0.8rem;
+    }
+
+    .kanban-card__deadline-icon img {
+        width: 14px;
+        height: 14px;
+        display: block;
+        opacity: 0.6
+    }
+
+    .kanban-card__edit-btn {
+        color: var(--secondary-text-color);
+        width: 20px;
+        height: 20px;
+    }
+
+    .kanban-card__delete-btn {
+        color: var(--accent-red);
+        width: 20px;
+        height: 20px;
+    }
+
+    .kanban-card__checkbox {
+        width: 14px;
+        height: 14px;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+}
+
+@media (min-width: 1024px) {
+    .kanban-card__header h3 {
+        font-size: 1rem;
+    }
+
+    .kanban-card__content p {
+        font-size: 0.9rem;
+    }
+
+    .kanban-card__content .kanban-card__description {
+        display: block;
+        max-height: 120px;
+        overflow-y: auto;
+        word-break: break-word;
+        padding-right: 0.4rem;
+    }
+
+    .kanban-card__deadline p {
+        font-size: 0.9rem;
+    }
+
+    .kanban-card__deadline-icon img {
+        width: 16px;
+        height: 16px;
+    }
+
+    .kanban-card__edit-btn {
+        color: var(--secondary-text-color);
+        width: 24px;
+        height: 24px;
+    }
+
+    .kanban-card__delete-btn {
+        color: var(--accent-red);
+        width: 24px;
+        height: 24px;
+    }
+
+    .kanban-card__checkbox {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+}
+
+@media (max-width: 767px) {
+    .kanban-column.is-mobile-expanded .kanban-card__content .kanban-card__description {
+        display: block;
+        max-height: 80px;
+        overflow-y: auto;
+        word-break: break-word;
+        padding-right: 0.4rem;
+    }
+}

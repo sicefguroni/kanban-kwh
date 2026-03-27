@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KWH Kanban - Login</title>
+  <link rel="stylesheet" href="./components/auth/auth.css">
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1 class="app-title">KWH Kanban</h1>
+        <p class="app-subtitle">Organize your tasks with ease</p>
+      </div>
+      <form id="auth-form" class="auth-form">
+        <div id="auth-form-container"></div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { AuthComponent } from './components/auth/auth.js';
+    import apiService from './services/api-service.js';
+    import authService from './services/auth-service.js';
+
+    // Check if already logged in
+    if (authService.isLoggedIn()) {
+      window.location.href = './index.html';
+    }
+
+    // Handle Google OAuth callback
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const userStr = params.get('user');
+
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(decodeURIComponent(userStr));
+        apiService.setToken(token);
+        authService.setAuthState(user, token);
+        // Remove query params from URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        // Redirect to dashboard
+        window.location.href = './index.html';
+      } catch (error) {
+        console.error('Error processing Google OAuth callback:', error);
+      }
+    }
+
+    // Initialize auth component
+    const authComponent = new AuthComponent('#auth-form-container');
+    authComponent.render();
+    window.authComponent = authComponent;
+
+    // Listen for successful login/register
+    window.addEventListener('auth:login', (e) => {
+      const user = e.detail;
+      authService.setAuthState(user, apiService.token);
+      // Redirect to dashboard
+      window.location.href = './index.html';
+    });
+
+    window.addEventListener('auth:register', (e) => {
+      const user = e.detail;
+      authService.setAuthState(user, apiService.token);
+      // Redirect to dashboard
+      window.location.href = './index.html';
+    });
+  </script>
+</body>
+</html>

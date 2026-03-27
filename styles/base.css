@@ -1,0 +1,79 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+button:focus,
+input:focus,
+select:focus,
+textarea:focus,
+a:focus {
+    outline: none;
+}
+
+html, body {
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+}
+
+.app {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+:root {
+    --primary-color: #ffffff;
+    --secondary-color: #F3F3F5;
+    --tertiary-color: #030213;
+    --primary-button-color: #030213;
+    --secondary-button-color: #ffffff;
+    --primary-text-color: #0A0A0A;
+    --secondary-text-color: #717182;
+    --primary-border-color: #717182;
+    /* Red / Yellow / Blue theme accents */
+    --accent-red: #dc2626;
+    --accent-red-dark: #b91c1c;
+    --accent-red-muted: rgba(220, 38, 38, 0.12);
+    --accent-yellow: #eab308;
+    --accent-yellow-dark: #ca8a04;
+    --accent-yellow-muted: rgba(234, 179, 8, 0.15);
+    --accent-blue: #2563eb;
+    --accent-blue-dark: #1d4ed8;
+    --accent-blue-muted: rgba(37, 99, 235, 0.12);
+    --accent-blue-border: rgba(37, 99, 235, 0.35);
+    --accent-blue-border-soft: rgba(37, 99, 235, 0.2);
+}
+
+/* Auth Page Styles */
+.auth-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 500px;
+    padding: 20px;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 40px;
+    color: white;
+}
+
+.auth-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+.auth-header p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
