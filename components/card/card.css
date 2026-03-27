@@ -120,7 +120,10 @@
 /* Keyboard focus: same as hover so selection is obvious and consistent */
 .kanban-card.is-keyboard-focused {
     transform: translateY(-1px);
-    border-color: var(--accent-blue-border);
+    border-color: var(--accent-blue-dark);
+    box-shadow:
+        0 0 0 2px rgba(29, 78, 216, 0.35),
+        0 8px 18px rgba(0, 0, 0, 0.08);
 }
 
 .kanban-card__action-btn {

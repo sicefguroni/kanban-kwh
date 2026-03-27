@@ -2,14 +2,15 @@ import { StorageService } from '../../services/storage-service.js';
 import authService from '../../services/auth-service.js';
 import apiService from '../../services/api-service.js';
 import SyncManager from '../../services/sync-manager.js';
-import { COLUMN_STATUSES } from './constants.js';
+import { COLUMN_STATUSES, TASK_STATUS } from './constants.js';
 import { DashboardDOM } from './dom/dashboard-dom.js';
 import { DashboardRender } from './dom/dashboard-render.js';
 import { DashboardDeleteModal } from './modals/dashboard-delete-modal.js';
 import { DashboardModal } from './modals/dashboard-modal.js';
 import { setupKeyboard } from './interactions/dashboard-keyboard.js';
 import { setupProximitySnapping } from './interactions/dashboard-proximity.js';
-import { setupWebSocketIntegration, connectWebSocket, disconnectWebSocket } from './interactions/webSocketIntegration.js';
+import { setupMobileDrop } from './interactions/mobile-drop.js';
+import { setupWebSocketIntegration, connectWebSocket, disconnectWebSocket } from './interactions/websocket-integration.js';
 
 // Check authentication on page load
 if (!authService.isLoggedIn()) {
@@ -39,12 +40,18 @@ class KanbanDashboard {
         this.$syncBadge = null;
         this.keyboard = null;
         this.syncManager = null;
+        this._mobileDropCleanup = null;
         this._visibilityTimer = null;
         this._pollTimer = null;
         this._onVisibilityChange = null;
         // Serialize operations that mutate tasks + re-render.
         // This prevents race conditions when multiple UI events happen quickly.
         this._opChain = Promise.resolve();
+
+        // Stable handler references to avoid re-creating closures on every re-render.
+        this._onEditTaskRendered = (taskData) => this.openModalForEdit(taskData);
+        this._onDeleteTaskRendered = (taskId) => this.handleDeleteTask(taskId);
+        this._onAfterStatusChangeRendered = (taskId) => this.pushTaskMoveToServer(taskId);
     }
 
     async loadComponents() {
@@ -189,117 +196,10 @@ class KanbanDashboard {
     }
 
     initMobileDropBar() {
-        const dashboard = document.querySelector('.dashboard');
-        if (!dashboard || document.getElementById('MOBILE_DROP_BAR')) return;
-
-        const self = this;
-        const mobileMql = window.matchMedia('(max-width: 767px)');
-        let lastDragoverClientX = null;
-        let overlay = null;
-
-        const bar = document.createElement('div');
-        bar.id = 'MOBILE_DROP_BAR';
-        bar.className = 'mobile-drop-bar';
-        bar.setAttribute('aria-label', 'Drop zone for moving tasks');
-        bar.innerHTML = COLUMN_STATUSES.map(
-            (status) =>
-                `<div class="mobile-drop-bar__zone" data-status="${status}">${status}</div>`
-        ).join('');
-        dashboard.appendChild(bar);
-
-        function statusFromClientX(clientX) {
-            const w = document.documentElement.clientWidth || 1;
-            if (clientX == null || Number.isNaN(clientX) || clientX <= 0) {
-                const mid = w / 2;
-                clientX = mid;
-            }
-            const x = Math.max(0, Math.min(clientX, w - 1));
-            const i = Math.floor((x / w) * COLUMN_STATUSES.length);
-            return COLUMN_STATUSES[Math.max(0, Math.min(i, COLUMN_STATUSES.length - 1))];
-        }
-
-        function hideDropUI() {
-            bar.classList.remove('is-visible');
-            lastDragoverClientX = null;
-            bar.querySelectorAll('.mobile-drop-bar__zone').forEach((z) => z.classList.remove('is-drag-over'));
-            if (overlay && overlay.parentNode) {
-                overlay.remove();
-                overlay = null;
-            }
-        }
-
-        function performDrop(taskId, status) {
-            if (!taskId || !status) return;
-            hideDropUI();
-            self.handleDropCard(status, taskId, undefined);
-        }
-
-        bar.querySelectorAll('.mobile-drop-bar__zone').forEach((zone) => {
-            zone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                e.dataTransfer.dropEffect = 'move';
-                zone.classList.add('is-drag-over');
-            });
-            zone.addEventListener('dragleave', (e) => {
-                if (!zone.contains(e.relatedTarget)) zone.classList.remove('is-drag-over');
-            });
-            zone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const taskId = e.dataTransfer.getData('text/plain');
-                const status = zone.dataset.status;
-                performDrop(taskId, status);
-            });
-        });
-
-        function showOverlay() {
-            if (overlay) return;
-            overlay = document.createElement('div');
-            overlay.id = 'MOBILE_DROP_OVERLAY';
-            overlay.className = 'mobile-drop-overlay is-visible';
-            overlay.setAttribute('aria-hidden', 'true');
-
-            overlay.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                e.dataTransfer.dropEffect = 'move';
-                lastDragoverClientX = e.clientX;
-                const status = statusFromClientX(e.clientX);
-                bar.querySelectorAll('.mobile-drop-bar__zone').forEach((z) => {
-                    z.classList.toggle('is-drag-over', z.dataset.status === status);
-                });
-            });
-            overlay.addEventListener('dragleave', (e) => {
-                if (!overlay?.contains(e.relatedTarget)) {
-                    lastDragoverClientX = null;
-                    bar.querySelectorAll('.mobile-drop-bar__zone').forEach((z) => z.classList.remove('is-drag-over'));
-                }
-            });
-            overlay.addEventListener('drop', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const taskId = e.dataTransfer.getData('text/plain');
-                const x = lastDragoverClientX ?? e.clientX;
-                const status = statusFromClientX(x);
-                performDrop(taskId, status);
-            });
-
-            dashboard.appendChild(overlay);
-        }
-
-        document.addEventListener('dragstart', (e) => {
-            if (!e.target.closest('.kanban-card[data-task-id]')) return;
-            if (!mobileMql.matches) return;
-            lastDragoverClientX = null;
-            bar.classList.add('is-visible');
-            requestAnimationFrame(() => {
-                showOverlay();
-            });
-        });
-
-        document.addEventListener('dragend', () => {
-            setTimeout(hideDropUI, 0);
+        // Separated to `interactions/mobile-drop.js`
+        this._mobileDropCleanup?.();
+        this._mobileDropCleanup = setupMobileDrop({
+            onDrop: (status, taskId) => this.handleDropCard(status, taskId, undefined),
         });
     }
 
@@ -307,7 +207,7 @@ class KanbanDashboard {
         if (!this.$addTaskBtn) return;
         this.$addTaskBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            this.openModalForCreate('To Do');
+            this.openModalForCreate(TASK_STATUS.TODO);
         });
     }
 
@@ -400,11 +300,10 @@ class KanbanDashboard {
 
     async renderTasks() {
         if (!this.renderer) this.renderer = new DashboardRender(this.columnInstances);
-        this.renderer._afterRender = () => this.keyboard?.syncFocus();
         await this.renderer.renderTasks(
-            (taskData) => this.openModalForEdit(taskData),
-            (taskId) => this.handleDeleteTask(taskId),
-            (taskId) => this.pushTaskMoveToServer(taskId)
+            this._onEditTaskRendered,
+            this._onDeleteTaskRendered,
+            this._onAfterStatusChangeRendered
         );
     }
 
@@ -492,6 +391,9 @@ class KanbanDashboard {
             onMoveTask: (taskId, newStatus, insertIndex) => this.handleDropCard(newStatus, taskId, insertIndex),
             isModalOpen: () => document.querySelector('.modal-overlay.is-open') != null,
         });
+
+        // Re-apply keyboard focus after we re-render the board.
+        this.renderer._afterRender = () => this.keyboard?.syncFocus();
 
         this.syncManager = new SyncManager({
             onStatusChange: (status) => this.setSyncBadge(status),

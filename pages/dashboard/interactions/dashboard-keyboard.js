@@ -24,6 +24,22 @@ export function setupKeyboard(ctx) {
     let selectedColumnIndex = 0;
     let selectedCardIndex = -1;
 
+    // Keys we handle at the document level should prevent their default browser behavior.
+    const KEYS_TO_PREVENT_DEFAULT = new Set([
+        '?',
+        'Escape',
+        '1',
+        '2',
+        '3',
+        'ArrowLeft',
+        'ArrowRight',
+        'ArrowUp',
+        'ArrowDown',
+        'Enter',
+        'e',
+        'd',
+    ]);
+
     function getColumnElement(index) {
         const status = COLUMN_STATUSES[index];
         return status ? columnInstances[status]?.element : null;
@@ -143,20 +159,19 @@ export function setupKeyboard(ctx) {
             if (e.key === 'Escape') $help.classList.remove('is-visible');
             return;
         }
+
+        if (KEYS_TO_PREVENT_DEFAULT.has(e.key)) e.preventDefault();
         switch (e.key) {
             case '?':
-                e.preventDefault();
                 showHelp();
                 return;
             case 'Escape':
-                e.preventDefault();
                 selectedCardIndex = -1;
                 applyFocus();
                 return;
             case '1':
             case '2':
             case '3': {
-                e.preventDefault();
                 const i = parseInt(e.key, 10) - 1;
                 selectedColumnIndex = clampColumn(i);
                 const cards = getCardElements(selectedColumnIndex);
@@ -166,7 +181,6 @@ export function setupKeyboard(ctx) {
             }
             case 'ArrowLeft': {
                 if (e.shiftKey) {
-                    e.preventDefault();
                     if (onMoveTask) {
                         const taskId = getSelectedTaskId();
                         if (taskId && selectedColumnIndex > 0) {
@@ -176,7 +190,6 @@ export function setupKeyboard(ctx) {
                     }
                     return;
                 }
-                e.preventDefault();
                 selectedColumnIndex = clampColumn(selectedColumnIndex - 1);
                 const cards = getCardElements(selectedColumnIndex);
                 selectedCardIndex = cards.length > 0 ? Math.min(selectedCardIndex, cards.length - 1) : -1;
@@ -186,7 +199,6 @@ export function setupKeyboard(ctx) {
             }
             case 'ArrowRight': {
                 if (e.shiftKey) {
-                    e.preventDefault();
                     if (onMoveTask) {
                         const taskId = getSelectedTaskId();
                         if (taskId && selectedColumnIndex < COLUMN_STATUSES.length - 1) {
@@ -196,7 +208,6 @@ export function setupKeyboard(ctx) {
                     }
                     return;
                 }
-                e.preventDefault();
                 selectedColumnIndex = clampColumn(selectedColumnIndex + 1);
                 const cards = getCardElements(selectedColumnIndex);
                 selectedCardIndex = cards.length > 0 ? Math.min(selectedCardIndex, cards.length - 1) : -1;
@@ -206,7 +217,6 @@ export function setupKeyboard(ctx) {
             }
             case 'ArrowUp': {
                 if (e.shiftKey) {
-                    e.preventDefault();
                     if (onMoveTask) {
                         const taskId = getSelectedTaskId();
                         if (taskId && selectedCardIndex > 0) {
@@ -216,7 +226,6 @@ export function setupKeyboard(ctx) {
                     }
                     return;
                 }
-                e.preventDefault();
                 const cardsUp = getCardElements(selectedColumnIndex);
                 const atTopOfColumn = selectedCardIndex <= 0;
                 if (isMobileView() && selectedColumnIndex > 0 && atTopOfColumn) {
@@ -231,7 +240,6 @@ export function setupKeyboard(ctx) {
             }
             case 'ArrowDown': {
                 if (e.shiftKey) {
-                    e.preventDefault();
                     if (onMoveTask) {
                         const taskId = getSelectedTaskId();
                         const cardsDown = getCardElements(selectedColumnIndex);
@@ -242,48 +250,51 @@ export function setupKeyboard(ctx) {
                     }
                     return;
                 }
-                e.preventDefault();
                 const cardsDown = getCardElements(selectedColumnIndex);
                 if (selectedCardIndex < 0 && cardsDown.length > 0) {
                     selectedCardIndex = 0;
-                } else if (isMobileView() && cardsDown.length > 0 && selectedCardIndex === cardsDown.length - 1 && selectedColumnIndex < COLUMN_STATUSES.length - 1) {
-                    selectedColumnIndex += 1;
-                    const nextCards = getCardElements(selectedColumnIndex);
-                    selectedCardIndex = nextCards.length > 0 ? 0 : -1;
                 } else {
-                    selectedCardIndex = clampCardIndex(selectedCardIndex + 1);
+                    const canAdvanceToNextColumn = (
+                        isMobileView() &&
+                        cardsDown.length > 0 &&
+                        selectedCardIndex === cardsDown.length - 1 &&
+                        selectedColumnIndex < COLUMN_STATUSES.length - 1
+                    );
+
+                    if (canAdvanceToNextColumn) {
+                        selectedColumnIndex += 1;
+                        const nextCards = getCardElements(selectedColumnIndex);
+                        selectedCardIndex = nextCards.length > 0 ? 0 : -1;
+                    } else {
+                        selectedCardIndex = clampCardIndex(selectedCardIndex + 1);
+                    }
                 }
                 applyFocus();
                 return;
             }
             case 'Enter': {
                 if (e.shiftKey) {
-                    e.preventDefault();
                     onCreateTask(COLUMN_STATUSES[selectedColumnIndex]);
                     return;
                 }
                 const card = target.closest('.kanban-card') ?? getSelectedCardElement();
                 const checkbox = card?.querySelector('.kanban-card__checkbox');
                 if (checkbox) {
-                    e.preventDefault();
                     checkbox.click();
                 } else {
                     const taskId = getSelectedTaskId();
                     if (taskId) {
-                        e.preventDefault();
                         onEditTask(taskId);
                     }
                 }
                 return;
             }
             case 'e': {
-                e.preventDefault();
                 const editId = getSelectedTaskId();
                 if (editId) onEditTask(editId);
                 return;
             }
             case 'd': {
-                e.preventDefault();
                 const deleteId = getSelectedTaskId();
                 if (deleteId) onDeleteTask(deleteId);
                 return;

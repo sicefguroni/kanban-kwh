@@ -1,42 +1,46 @@
 import { COLUMN_STATUSES } from '../constants.js';
 
-function distanceToColumn(x, columnInstance) {
-    if (!columnInstance?.element) return Infinity;
-    const rect = columnInstance.element.getBoundingClientRect();
-    return Math.abs(x - (rect.left + rect.width / 2));
-}
+const proximityHelpers = {
+    distanceToColumn(x, columnInstance) {
+        if (!columnInstance?.element) return Infinity;
+        const rect = columnInstance.element.getBoundingClientRect();
+        return Math.abs(x - (rect.left + rect.width / 2));
+    },
 
-function findNearestColumn(x, columnInstances) {
-    for (const status of COLUMN_STATUSES) {
-        const col = columnInstances[status];
-        if (!col) continue;
-        if (col.isInsideColumn(x)) return col;
-    }
-    let nearest = null;
-    let minDist = Infinity;
-    for (const status of COLUMN_STATUSES) {
-        const col = columnInstances[status];
-        if (!col || !col.isNearColumn(x)) continue;
-        const d = distanceToColumn(x, col);
-        if (d < minDist) {
-            minDist = d;
-            nearest = col;
+    findNearestColumn(x, columnInstances) {
+        for (const status of COLUMN_STATUSES) {
+            const col = columnInstances[status];
+            if (!col) continue;
+            if (col.isInsideColumn(x)) return col;
         }
-    }
-    return nearest;
-}
 
-function updateSnapState(nearestColumn, columnInstances, clearSnapEffects) {
-    if (!nearestColumn) {
-        clearSnapEffects();
-        return;
-    }
-    COLUMN_STATUSES.forEach(status => {
-        const col = columnInstances[status];
-        if (col === nearestColumn) col.triggerSnapEffect();
-        else col.clearSnapEffect();
-    });
-}
+        let nearest = null;
+        let minDist = Infinity;
+        for (const status of COLUMN_STATUSES) {
+            const col = columnInstances[status];
+            if (!col || !col.isNearColumn(x)) continue;
+            const d = proximityHelpers.distanceToColumn(x, col);
+            if (d < minDist) {
+                minDist = d;
+                nearest = col;
+            }
+        }
+        return nearest;
+    },
+
+    updateSnapState(nearestColumn, columnInstances, clearSnapEffects) {
+        if (!nearestColumn) {
+            clearSnapEffects();
+            return;
+        }
+
+        COLUMN_STATUSES.forEach(status => {
+            const col = columnInstances[status];
+            if (col === nearestColumn) col.triggerSnapEffect();
+            else col.clearSnapEffect();
+        });
+    },
+};
 
 /**
  * @param {{ columnInstances: Record<string, object>, onProximityDrop: (col: object, taskId: string) => void, clearSnapEffects: () => void }} ctx
@@ -78,7 +82,7 @@ export function setupProximitySnapping(ctx) {
         if (!isDragging) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
-        currentSnappingColumn = findNearestColumn(e.clientX, columnInstances);
-        updateSnapState(currentSnappingColumn, columnInstances, clearSnapEffects);
+        currentSnappingColumn = proximityHelpers.findNearestColumn(e.clientX, columnInstances);
+        proximityHelpers.updateSnapState(currentSnappingColumn, columnInstances, clearSnapEffects);
     });
 }

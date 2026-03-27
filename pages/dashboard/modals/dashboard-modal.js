@@ -1,4 +1,5 @@
 import { DashboardDOM } from '../dom/dashboard-dom.js';
+import { TASK_STATUS } from '../constants.js';
 
 export class DashboardModal {
     constructor() {
@@ -184,7 +185,7 @@ export class DashboardModal {
 
         if ($titleField) $titleField.value = taskData.title || '';
         if ($descField) $descField.value = taskData.description || '';
-        if ($statusField) $statusField.value = taskData.status || 'To Do';
+        if ($statusField) $statusField.value = taskData.status || TASK_STATUS.TODO;
         if ($deadlineField) $deadlineField.value = taskData.deadline || '';
     }
 
@@ -250,7 +251,7 @@ export class DashboardModal {
         return {
             title: formData.get('title'),
             description: formData.get('description'),
-            status: formData.get('status') || 'To Do',
+            status: formData.get('status') || TASK_STATUS.TODO,
             deadline: formData.get('deadline'),
         };
     }

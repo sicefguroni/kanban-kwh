@@ -1,4 +1,4 @@
-.btn {
+button.btn {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
@@ -33,7 +33,7 @@
     background-color: var(--secondary-color);
 }
 
-.btn:focus-visible {
+button.btn:focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px var(--accent-blue-border);
 }
@@ -49,7 +49,7 @@
 }
 
 @media (min-width: 768px) {
-    .btn {
+    button.btn {
         font-size: 0.875rem;
         padding: 0.5rem 1rem;
         gap: 0.5rem

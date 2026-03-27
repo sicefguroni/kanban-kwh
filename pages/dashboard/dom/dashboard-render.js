@@ -1,5 +1,5 @@
 import { StorageService } from '../../../services/storage-service.js';
-import { COLUMN_STATUSES } from '../constants.js';
+import { COLUMN_STATUSES, TASK_STATUS } from '../constants.js';
 import { DashboardDOM } from './dashboard-dom.js';
 
 export class DashboardRender {
@@ -64,27 +64,26 @@ export class DashboardRender {
         // Checkbox handling
         const $checkbox = $cardElement.querySelector('.kanban-card__checkbox');
         if ($checkbox) {
-            $checkbox.checked = taskData.status === 'Done';
+            $checkbox.checked = taskData.status === TASK_STATUS.DONE;
 
             $checkbox.addEventListener('change', async (e) => {
                 try {
-                    if (e.target.checked) {
-                        // advance status: To Do -> In Progress -> Done
-                        if (taskData.status === 'To Do') {
-                            await StorageService.moveTask(taskData.id, 'In Progress');
-                        } else if (taskData.status === 'In Progress') {
-                            await StorageService.moveTask(taskData.id, 'Done');
-                        } else {
-                            return;
-                        }
+                    const isChecked = e.target.checked;
+                    const currentStatus = taskData.status;
+
+                    // advance status: To Do -> In Progress -> Done
+                    // then unchecked: Done -> To Do
+                    let nextStatus = null;
+                    if (isChecked) {
+                        if (currentStatus === TASK_STATUS.TODO) nextStatus = TASK_STATUS.IN_PROGRESS;
+                        else if (currentStatus === TASK_STATUS.IN_PROGRESS) nextStatus = TASK_STATUS.DONE;
+                        else return;
                     } else {
-                        // unchecked from Done -> move back to To Do
-                        if (taskData.status === 'Done') {
-                            await StorageService.moveTask(taskData.id, 'To Do');
-                        } else {
-                            return;
-                        }
+                        if (currentStatus === TASK_STATUS.DONE) nextStatus = TASK_STATUS.TODO;
+                        else return;
                     }
+
+                    await StorageService.moveTask(taskData.id, nextStatus);
 
                     await this.renderTasks(this._onEdit, this._onDelete);
                     if (this._onAfterStatusChange) {
