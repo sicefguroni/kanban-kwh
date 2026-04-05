@@ -1,4 +1,4 @@
-import { formatDateString } from '../../utils/format-date.js';
+import { formatDateString } from '../../utils/FormatDate.js';
 
 const TEMPLATE_ID = 'CARD_TEMPLATE';
 const DEFAULT_CONTAINER = '.app';

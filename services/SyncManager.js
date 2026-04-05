@@ -1,5 +1,5 @@
-import StorageService from './storage-service.js';
-import apiService from './api-service.js';
+import StorageService from './StorageService.js';
+import apiService from './APIService.js';
 
 class SyncManager {
   constructor({

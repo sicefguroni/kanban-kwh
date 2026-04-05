@@ -1,6 +1,6 @@
-import { StorageService } from '../../../services/storage-service.js';
-import { COLUMN_STATUSES, TASK_STATUS } from '../constants.js';
-import { DashboardDOM } from './dashboard-dom.js';
+import { StorageService } from '../../../services/StorageService.js';
+import { COLUMN_STATUSES, TASK_STATUS } from '../Constants.js';
+import { DashboardDOM } from './DashboardDOM.js';
 
 export class DashboardRender {
     constructor(columnInstances) {

@@ -1,4 +1,4 @@
-import { formatDateString } from '../../../utils/format-date.js';
+import { formatDateString } from '../../../utils/FormatDate.js';
 
 export const DashboardDOM = {
     createAddTaskButton() {

@@ -1,4 +1,4 @@
-import { renderButton } from '../button/button.js';
+import { renderButton } from '../button/Button.js';
 
 const TEMPLATE_ID = 'DELETE_MODAL_TEMPLATE';
 const CLASS_OPEN = 'is-open';

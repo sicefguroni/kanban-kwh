@@ -1,4 +1,4 @@
-import apiService from '../../services/api-service.js';
+import apiService from '../../services/APIService.js';
 
 export class AuthComponent {
   constructor(containerSelector = '#auth-form-container') {

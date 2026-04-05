@@ -1,4 +1,4 @@
-import { COLUMN_STATUSES } from '../constants.js';
+import { COLUMN_STATUSES } from '../Constants.js';
 
 const MOBILE_BREAKPOINT = '(max-width: 767px)';
 

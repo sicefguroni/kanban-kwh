@@ -1,16 +1,16 @@
-import { StorageService } from '../../services/storage-service.js';
-import authService from '../../services/auth-service.js';
-import apiService from '../../services/api-service.js';
-import SyncManager from '../../services/sync-manager.js';
-import { COLUMN_STATUSES, TASK_STATUS } from './constants.js';
-import { DashboardDOM } from './dom/dashboard-dom.js';
-import { DashboardRender } from './dom/dashboard-render.js';
-import { DashboardDeleteModal } from './modals/dashboard-delete-modal.js';
-import { DashboardModal } from './modals/dashboard-modal.js';
-import { setupKeyboard } from './interactions/dashboard-keyboard.js';
-import { setupProximitySnapping } from './interactions/dashboard-proximity.js';
-import { setupMobileDrop } from './interactions/mobile-drop.js';
-import { setupWebSocketIntegration, connectWebSocket, disconnectWebSocket } from './interactions/websocket-integration.js';
+import { StorageService } from '../../services/StorageService.js';
+import authService from '../../services/AuthService.js';
+import apiService from '../../services/APIService.js';
+import SyncManager from '../../services/SyncManager.js';
+import { COLUMN_STATUSES, TASK_STATUS } from './Constants.js';
+import { DashboardDOM } from './dom/DashboardDOM.js';
+import { DashboardRender } from './dom/DashboardRender.js';
+import { DashboardDeleteModal } from './modals/DashboardDeleteModal.js';
+import { DashboardModal } from './modals/DashboardModal.js';
+import { setupKeyboard } from './interactions/DashboardKeyboard.js';
+import { setupProximitySnapping } from './interactions/DashboardProximity.js';
+import { setupMobileDrop } from './interactions/MobileDrop.js';
+import { setupWebSocketIntegration, connectWebSocket, disconnectWebSocket } from './interactions/WebSocketIntegration.js';
 
 // Check authentication on page load
 if (!authService.isLoggedIn()) {
@@ -18,13 +18,13 @@ if (!authService.isLoggedIn()) {
 }
 
 const COMPONENTS = [
-    'pages/dashboard/dashboard.html',
-    'components/card/card.html',
-    'components/column/column.html',
-    'components/button/button.html',
-    'components/modal-field/modal-field.html',
-    'components/modal/modal.html',
-    'components/delete-modal/delete-modal.html'
+    'pages/dashboard/KanbanDashboard.html',
+    'components/card/KanbanCard.html',
+    'components/column/KanbanColumn.html',
+    'components/button/Button.html',
+    'components/modal-field/ModalField.html',
+    'components/modal/Modal.html',
+    'components/delete-modal/DeleteModal.html'
 ];
 
 // ============ Kanban Dashboard Manager ============
@@ -196,7 +196,7 @@ class KanbanDashboard {
     }
 
     initMobileDropBar() {
-        // Separated to `interactions/mobile-drop.js`
+        // Separated to `interactions/MobileDrop.js`
         this._mobileDropCleanup?.();
         this._mobileDropCleanup = setupMobileDrop({
             onDrop: (status, taskId) => this.handleDropCard(status, taskId, undefined),
@@ -452,8 +452,8 @@ class KanbanDashboard {
 
 
 async function initDashboard() {
-    const { KanbanCard } = await import('../../components/card/card.js');
-    const { KanbanColumn } = await import('../../components/column/column.js');
+    const { KanbanCard } = await import('../../components/card/KanbanCard.js');
+    const { KanbanColumn } = await import('../../components/column/KanbanColumn.js');
 
     const dashboard = new KanbanDashboard(KanbanCard, KanbanColumn);
     await dashboard.init();

@@ -1,5 +1,5 @@
-import { DashboardDOM } from '../dom/dashboard-dom.js';
-import { TASK_STATUS } from '../constants.js';
+import { DashboardDOM } from '../dom/DashboardDOM.js';
+import { TASK_STATUS } from '../Constants.js';
 
 export class DashboardModal {
     constructor() {

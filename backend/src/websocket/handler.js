@@ -4,7 +4,7 @@
  */
 
 import { WebSocketServer } from 'ws';
-import wsManager from './manager.js';
+import wsManager from './WebSocketManager.js';
 
 /**
  * Initialize WebSocket server

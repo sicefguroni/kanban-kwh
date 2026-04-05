@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
-const { TasksStore, STATUSES } = require('./tasksStore');
+const { TasksStore, STATUSES } = require('./TasksStore');
 
 const PORT = Number(process.env.PORT || 3001);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';

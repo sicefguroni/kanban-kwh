@@ -1,4 +1,4 @@
-import { renderButton } from '../button/button.js';
+import { renderButton } from '../button/Button.js';
 
 const TEMPLATE_ID = 'MODAL_TEMPLATE';
 const FIELDS_TEMPLATE_ID = 'MODAL_FIELD_TEMPLATE';

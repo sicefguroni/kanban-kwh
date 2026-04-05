@@ -1,4 +1,4 @@
-import { COLUMN_STATUSES } from '../constants.js';
+import { COLUMN_STATUSES } from '../Constants.js';
 
 const FOCUS_CLASS_COLUMN = 'is-keyboard-focused';
 const FOCUS_CLASS_CARD = 'is-keyboard-focused';

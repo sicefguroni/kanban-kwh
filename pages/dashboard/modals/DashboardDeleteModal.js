@@ -1,4 +1,4 @@
-import { initDeleteModal, openDeleteModal, closeDeleteModal } from '../../../components/delete-modal/delete-modal.js';
+import { initDeleteModal, openDeleteModal, closeDeleteModal } from '../../../components/delete-modal/DeleteModal.js';
 
 export class DashboardDeleteModal {
     constructor() {

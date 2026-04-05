@@ -2,7 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import pool, { isDbReady, trySetDbReady } from '../db/connection.js';
-import AuthService, { authMiddleware } from '../middleware/auth.js';
+import AuthService, { authMiddleware } from '../middleware/AuthService.js';
 import { authEmailLimiter, loginLimiter } from '../middleware/rate-limit.js';
 
 const router = express.Router();

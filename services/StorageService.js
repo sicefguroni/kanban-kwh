@@ -43,7 +43,7 @@ function dispatchQueueChanged() {
     }
 }
 
-class StorageServiceClass {
+class StorageService {
     constructor() {
         this.dbPromise = null;
     }
@@ -272,5 +272,6 @@ class StorageServiceClass {
     }
 }
 
-export const StorageService = new StorageServiceClass();
-export default StorageService;
+const storageService = new StorageService();
+export { storageService as StorageService };
+export default storageService;

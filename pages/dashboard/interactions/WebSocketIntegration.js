@@ -1,9 +1,9 @@
 /**
  * WebSocket Integration for Dashboard
- * Applies server events (storage is updated in websocket-service) then re-renders.
+ * Applies server events (storage is updated in WebSocketService) then re-renders.
  */
 
-import wsService from '../../../services/websocket-service.js';
+import wsService from '../../../services/WebSocketService.js';
 
 let isSetup = false;
 let debounceTimer = null;

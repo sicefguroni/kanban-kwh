@@ -2,7 +2,7 @@
  * Mobile drag targets — hidden on desktop.
  * Full-width row (with side insets), vertically centered, with gaps between
  * zones so each tile lines up with the left / center / right thirds used by
- * `statusFromClientX()` in mobile-drop.js.
+ * `statusFromClientX()` in MobileDrop.js.
  */
 
 .mobile-drop-bar {

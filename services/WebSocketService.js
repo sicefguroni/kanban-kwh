@@ -3,8 +3,8 @@
  * Manages WebSocket connection and event listeners
  */
 
-import StorageService from './storage-service.js';
-import apiService from './api-service.js';
+import StorageService from './StorageService.js';
+import apiService from './APIService.js';
 
 /** Build ws/wss URL from the same host as the REST API (e.g. ngrok, different port). */
 export function wsUrlFromApiBase(apiBaseUrl) {

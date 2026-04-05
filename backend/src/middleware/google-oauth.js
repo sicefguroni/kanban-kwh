@@ -1,7 +1,7 @@
 import GoogleStrategy from 'passport-google-oauth20';
 import { v4 as uuidv4 } from 'uuid';
 import pool from '../db/connection.js';
-import AuthService from './auth.js';
+import AuthService from './AuthService.js';
 
 export function initializeGoogleStrategy(passport) {
   // Only initialize Google OAuth if credentials are provided
