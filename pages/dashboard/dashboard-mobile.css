@@ -1,6 +1,8 @@
 /**
- * Mobile drag targets — hidden on desktop. Without these rules, the bar stays
- * in normal document flow and shows "To Do / In Progress / Done" at the page bottom.
+ * Mobile drag targets — hidden on desktop.
+ * Full-width row (with side insets), vertically centered, with gaps between
+ * zones so each tile lines up with the left / center / right thirds used by
+ * `statusFromClientX()` in mobile-drop.js.
  */
 
 .mobile-drop-bar {
@@ -15,103 +17,129 @@
     .mobile-drop-bar {
         display: flex;
         position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
+        left: max(0.65rem, env(safe-area-inset-left));
+        right: max(0.65rem, env(safe-area-inset-right));
+        top: 50%;
         z-index: 9998;
-        flex-wrap: nowrap;
-        gap: 0;
-        min-height: 0;
+        width: auto;
+        max-width: none;
+        flex-direction: row;
+        align-items: stretch;
+        gap: 0.75rem;
+        padding: 0.45rem 0;
         margin: 0;
-        padding: 0;
         list-style: none;
-        background: rgba(255, 255, 255, 0.98);
-        border-top: 1px solid rgba(15, 23, 42, 0.14);
-        box-shadow:
-            0 -10px 24px rgba(0, 0, 0, 0.10),
-            0 -1px 0 rgba(255, 255, 255, 0.6);
+        pointer-events: none;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        overflow: visible;
         opacity: 0;
         visibility: hidden;
-        pointer-events: none;
-        transform: translateY(100%);
-        transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+        transform: translateY(-50%) scale(0.96);
+        transition:
+            opacity 0.22s ease,
+            visibility 0.22s ease,
+            transform 0.24s cubic-bezier(0.34, 1.1, 0.64, 1);
     }
 
     .mobile-drop-bar.is-visible {
         opacity: 1;
         visibility: visible;
-        pointer-events: auto;
-        transform: translateY(0);
+        pointer-events: none;
+        transform: translateY(-50%) scale(1);
     }
 
     .mobile-drop-bar__zone {
-        flex: 1;
+        pointer-events: auto;
+        flex: 1 1 0;
         min-width: 0;
-        padding: 0.55rem 0.2rem 0.6rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.65rem 0.35rem;
         font-size: 0.65rem;
-        font-weight: 600;
+        font-weight: 700;
         line-height: 1.2;
         text-align: center;
-        color: rgba(15, 23, 42, 0.72);
-        border-right: 2px solid rgba(15, 23, 42, 0.12);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
-    }
-
-    .mobile-drop-bar__zone:last-child {
-        border-right: none;
+        border-radius: 0.75rem;
+        border: 2px solid;
+        box-shadow: 0 2px 0 rgba(0, 0, 0, 0.06);
+        background-clip: padding-box;
+        transform: scale(0.98);
+        transform-origin: center center;
+        transition:
+            transform 0.2s cubic-bezier(0.34, 1.15, 0.64, 1),
+            box-shadow 0.2s ease,
+            border-color 0.2s ease,
+            background-color 0.2s ease,
+            color 0.2s ease;
     }
 
     .mobile-drop-bar__zone.is-drag-over {
-        background: rgba(37, 99, 235, 0.14);
-        color: rgba(29, 78, 216, 0.98);
+        transform: scale(1.07);
+        z-index: 2;
         box-shadow:
-            inset 0 0 0 2px rgba(29, 78, 216, 0.28),
-            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            0 6px 16px rgba(0, 0, 0, 0.12),
+            0 2px 0 rgba(0, 0, 0, 0.05);
     }
 
-    /* Status tints so the three target areas are visually distinct. */
+    /* Solid fills — readable, opaque tiles (not washed-out gradients) */
     .mobile-drop-bar__zone[data-status="To Do"] {
-        background: rgba(239, 68, 68, 0.08);
+        background: #fecaca;
+        color: #7f1d1d;
+        border-color: #dc2626;
     }
     .mobile-drop-bar__zone[data-status="In Progress"] {
-        background: rgba(245, 158, 11, 0.10);
+        background: #fde047;
+        color: #713f12;
+        border-color: #ca8a04;
     }
     .mobile-drop-bar__zone[data-status="Done"] {
-        background: rgba(37, 99, 235, 0.08);
+        background: #93c5fd;
+        color: #1e3a8a;
+        border-color: #2563eb;
     }
 
+    .mobile-drop-bar__zone[data-status="To Do"].is-drag-over {
+        background: #f87171;
+        color: #450a0a;
+        border-color: #b91c1c;
+    }
+    .mobile-drop-bar__zone[data-status="In Progress"].is-drag-over {
+        background: #facc15;
+        color: #422006;
+        border-color: #a16207;
+    }
+    .mobile-drop-bar__zone[data-status="Done"].is-drag-over {
+        background: #3b82f6;
+        color: #eff6ff;
+        border-color: #1d4ed8;
+    }
+
+    /* Overlay: dim + faint vertical thirds so finger position matches bar segments */
     .mobile-drop-overlay {
         display: block;
         position: fixed;
         inset: 0;
         z-index: 9997;
-        background: transparent;
+        background: rgba(15, 23, 42, 0.38);
+        backdrop-filter: blur(1px);
     }
 
     .mobile-drop-overlay.is-visible {
         pointer-events: auto;
-        /* Three vertical "lanes" + dividers while dragging (very low opacity). */
         background-image:
             linear-gradient(
                 90deg,
-                rgba(239, 68, 68, 0.06) 0%,
-                rgba(239, 68, 68, 0.06) 33.333%,
-                rgba(245, 158, 11, 0.06) 33.333%,
-                rgba(245, 158, 11, 0.06) 66.666%,
-                rgba(37, 99, 235, 0.06) 66.666%,
-                rgba(37, 99, 235, 0.06) 100%
-            ),
-            linear-gradient(
-                90deg,
-                transparent 0%,
-                transparent calc(33.333% - 1px),
-                rgba(15, 23, 42, 0.20) 33.333%,
-                transparent calc(33.333% + 1px),
-                transparent calc(66.666% - 1px),
-                rgba(15, 23, 42, 0.20) 66.666%,
-                transparent calc(66.666% + 1px),
-                transparent 100%
+                rgba(239, 68, 68, 0.07) 0%,
+                rgba(239, 68, 68, 0.07) 33.333%,
+                rgba(245, 158, 11, 0.07) 33.333%,
+                rgba(245, 158, 11, 0.07) 66.666%,
+                rgba(37, 99, 235, 0.07) 66.666%,
+                rgba(37, 99, 235, 0.07) 100%
             );
-        background-size: 100% 100%;
+        background-color: rgba(15, 23, 42, 0.35);
     }
 }
