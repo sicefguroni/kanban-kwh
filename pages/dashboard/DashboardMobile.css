@@ -1,0 +1,145 @@
+/**
+ * Mobile drag targets — hidden on desktop.
+ * Full-width row (with side insets), vertically centered, with gaps between
+ * zones so each tile lines up with the left / center / right thirds used by
+ * `statusFromClientX()` in MobileDrop.js.
+ */
+
+.mobile-drop-bar {
+    display: none;
+}
+
+.mobile-drop-overlay {
+    display: none;
+}
+
+@media (max-width: 767px) {
+    .mobile-drop-bar {
+        display: flex;
+        position: fixed;
+        left: max(0.65rem, env(safe-area-inset-left));
+        right: max(0.65rem, env(safe-area-inset-right));
+        top: 50%;
+        z-index: 9998;
+        width: auto;
+        max-width: none;
+        flex-direction: row;
+        align-items: stretch;
+        gap: 0.75rem;
+        padding: 0.45rem 0;
+        margin: 0;
+        list-style: none;
+        pointer-events: none;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        overflow: visible;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-50%) scale(0.96);
+        transition:
+            opacity 0.22s ease,
+            visibility 0.22s ease,
+            transform 0.24s cubic-bezier(0.34, 1.1, 0.64, 1);
+    }
+
+    .mobile-drop-bar.is-visible {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: none;
+        transform: translateY(-50%) scale(1);
+    }
+
+    .mobile-drop-bar__zone {
+        pointer-events: auto;
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.65rem 0.35rem;
+        font-size: 0.65rem;
+        font-weight: 700;
+        line-height: 1.2;
+        text-align: center;
+        border-radius: 0.75rem;
+        border: 2px solid;
+        box-shadow: 0 2px 0 rgba(0, 0, 0, 0.06);
+        background-clip: padding-box;
+        transform: scale(0.98);
+        transform-origin: center center;
+        transition:
+            transform 0.2s cubic-bezier(0.34, 1.15, 0.64, 1),
+            box-shadow 0.2s ease,
+            border-color 0.2s ease,
+            background-color 0.2s ease,
+            color 0.2s ease;
+    }
+
+    .mobile-drop-bar__zone.is-drag-over {
+        transform: scale(1.07);
+        z-index: 2;
+        box-shadow:
+            0 6px 16px rgba(0, 0, 0, 0.12),
+            0 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    /* Solid fills — readable, opaque tiles (not washed-out gradients) */
+    .mobile-drop-bar__zone[data-status="To Do"] {
+        background: #fecaca;
+        color: #7f1d1d;
+        border-color: #dc2626;
+    }
+    .mobile-drop-bar__zone[data-status="In Progress"] {
+        background: #fde047;
+        color: #713f12;
+        border-color: #ca8a04;
+    }
+    .mobile-drop-bar__zone[data-status="Done"] {
+        background: #93c5fd;
+        color: #1e3a8a;
+        border-color: #2563eb;
+    }
+
+    .mobile-drop-bar__zone[data-status="To Do"].is-drag-over {
+        background: #f87171;
+        color: #450a0a;
+        border-color: #b91c1c;
+    }
+    .mobile-drop-bar__zone[data-status="In Progress"].is-drag-over {
+        background: #facc15;
+        color: #422006;
+        border-color: #a16207;
+    }
+    .mobile-drop-bar__zone[data-status="Done"].is-drag-over {
+        background: #3b82f6;
+        color: #eff6ff;
+        border-color: #1d4ed8;
+    }
+
+    /* Overlay: dim + faint vertical thirds so finger position matches bar segments */
+    .mobile-drop-overlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 9997;
+        background: rgba(15, 23, 42, 0.38);
+        backdrop-filter: blur(1px);
+    }
+
+    .mobile-drop-overlay.is-visible {
+        pointer-events: auto;
+        background-image:
+            linear-gradient(
+                90deg,
+                rgba(239, 68, 68, 0.07) 0%,
+                rgba(239, 68, 68, 0.07) 33.333%,
+                rgba(245, 158, 11, 0.07) 33.333%,
+                rgba(245, 158, 11, 0.07) 66.666%,
+                rgba(37, 99, 235, 0.07) 66.666%,
+                rgba(37, 99, 235, 0.07) 100%
+            );
+        background-color: rgba(15, 23, 42, 0.35);
+    }
+}

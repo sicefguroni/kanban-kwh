@@ -1,7 +1,7 @@
 import express from 'express';
 import pool, { isDbReady, trySetDbReady } from '../db/connection.js';
 import { broadcastTaskEvent } from '../websocket/handler.js';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware } from '../middleware/AuthService.js';
 import {
   listTasksForUser,
   listTasksByUserId,

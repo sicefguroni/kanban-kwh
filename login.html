@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KWH Kanban - Login</title>
-  <link rel="stylesheet" href="./components/auth/auth.css">
+  <link rel="stylesheet" href="./components/auth/AuthComponent.css">
 </head>
 <body>
   <div class="auth-wrapper">
@@ -20,9 +20,9 @@
   </div>
 
   <script type="module">
-    import { AuthComponent } from './components/auth/auth.js';
-    import apiService from './services/api-service.js';
-    import authService from './services/auth-service.js';
+    import { AuthComponent } from './components/auth/AuthComponent.js';
+    import apiService from './services/APIService.js';
+    import authService from './services/AuthService.js';
 
     // Check if already logged in
     if (authService.isLoggedIn()) {

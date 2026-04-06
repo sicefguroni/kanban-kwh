@@ -6,42 +6,61 @@ A task management Kanban board with drag-and-drop, keyboard navigation, and mobi
 
 ```text
 kanban-kwh/
-├── components/          # Reusable UI components (one folder per component)
+├── components/          # Reusable UI (PascalCase assets per component)
 │   ├── button/
-│   │   ├── button.html
-│   │   ├── button.css
-│   │   └── button.js
+│   │   ├── Button.html
+│   │   ├── Button.css
+│   │   └── Button.js
 │   ├── card/
+│   │   ├── KanbanCard.html
+│   │   ├── KanbanCard.css
+│   │   └── KanbanCard.js
 │   ├── column/
+│   │   ├── KanbanColumn.html
+│   │   ├── KanbanColumn.css
+│   │   └── KanbanColumn.js
+│   ├── auth/
+│   │   ├── AuthComponent.css
+│   │   └── AuthComponent.js
 │   ├── delete-modal/
 │   ├── modal/
 │   └── modal-field/
-├── pages/               # Page-level views
+├── pages/
 │   └── dashboard/
-│       ├── dashboard.html
-│       ├── dashboard.css
-│       ├── dashboard.js           # Main dashboard controller
-│       ├── dashboard-dom.js        # DOM helpers for dashboard
-│       ├── dashboard-modal.js      # Create/edit task modal logic
-│       ├── dashboard-delete-modal.js
-│       ├── dashboard-render.js     # Task list rendering
-│       ├── dashboard-keyboard.js   # Keyboard shortcuts
-│       ├── dashboard-proximity.js # Drag proximity snapping
-│       └── constants.js
-├── services/            # Business logic and data
-│   └── storage-service.js         # localStorage for tasks
-├── utils/               # Pure utilities
-│   └── format-date.js
+│       ├── KanbanDashboard.html
+│       ├── KanbanDashboard.css
+│       ├── DashboardKeyboard.css
+│       ├── DashboardMobile.css
+│       ├── KanbanDashboard.js      # KanbanDashboard class — page controller
+│       ├── Constants.js
+│       ├── dom/
+│       │   ├── DashboardDOM.js
+│       │   └── DashboardRender.js
+│       ├── modals/
+│       │   ├── DashboardModal.js
+│       │   └── DashboardDeleteModal.js
+│       └── interactions/
+│           ├── DashboardKeyboard.js
+│           ├── DashboardProximity.js
+│           ├── MobileDrop.js
+│           └── WebSocketIntegration.js
+├── services/            # Singletons / services (PascalCase .js)
+│   ├── StorageService.js
+│   ├── APIService.js
+│   ├── AuthService.js
+│   ├── SyncManager.js
+│   └── WebSocketService.js
+├── utils/
+│   └── FormatDate.js
 ├── styles/
-│   └── base.css         # Global variables and reset
+│   └── base.css
 ├── index.html
-└── DOCUMENTATION.md     # Clean Code guidelines and architecture
+└── DOCUMENTATION.md
 ```
 
-- **components**: Each component has its own folder with `.html`, `.css`, and `.js`. No subfolders when a folder has fewer than ~7 files.
-- **pages**: Dashboard is split by responsibility (DOM, modal, render, keyboard, proximity).
-- **services**: Storage and future API/auth live here.
-- **utils**: Shared helpers with no DOM or app state.
+- **Naming:** Primary JS/CSS/HTML names follow **PascalCase** and align with the main **class** or module role (e.g. `KanbanDashboard.js` ↔ `class KanbanDashboard`).
+- **pages**: Dashboard is split by responsibility (DOM, modal, render, keyboard, proximity, mobile drop).
+- **services**: Client-side storage, API, auth, sync, and WebSocket.
 
 ## Quick Setup
 
@@ -151,7 +170,7 @@ Create a request per endpoint above, set `Body -> raw -> JSON` for `POST/PATCH`,
 - **Columns:** To Do, In Progress, Done (red / yellow / blue theme).
 - **Tasks:** Add, edit, delete; optional description and deadline.
 - **Drag and drop:** Between columns; reorder within a column; proximity snapping on desktop.
-- **Mobile:** Bottom drop bar (bins) when dragging; full-screen drop target.
+- **Mobile:** Drop targets when dragging; full-screen drop overlay.
 - **Keyboard:** Arrows and 1/2/3 to move; Enter to toggle done; Shift+Enter new task; Shift+arrows to move cards; `e` edit, `d` delete; `?` shortcuts panel.
 
 ## Conventions
